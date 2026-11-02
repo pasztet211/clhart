@@ -71,18 +71,22 @@ nodes {
 
 - its data is written like the following:
 
+```text
 parameters {
     [parameter display name] --- starting value;mid value;end value :color:,
     [parameter display name] --- starting value;mid start value;mid end value;end value :color:
 }
+```
 
 ##### Distribution
 
 - its data is written like the following:
 
+```text
 parameters {
     [parameter display name] --- range start;range end|ammount :color:,
 }
+```
 
 #### nodes:
 
@@ -95,6 +99,7 @@ parameters {
 
 - egg sample:
 
+```text
 parameters {
     [node display name] --- [optional node identifier] :[optional node hex color]:,
 
@@ -102,6 +107,7 @@ parameters {
     [node identifier or name] <-- [node identifier or name],
     [node identifier or name] --> [node identifier or name]
 }
+```
 
 # Made by:
 
