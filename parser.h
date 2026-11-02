@@ -1,0 +1,131 @@
+#ifndef PARSER_H
+#define PARSER_H
+
+#include <stdbool.h>
+
+typedef enum {
+    CHART_NODES,
+    CHART_HISTOGRAM,
+    CHART_BAR
+} ChartType;
+
+typedef struct {
+    bool show_identifiers;
+    bool legend;
+} GlobalConfig;
+
+typedef struct {
+    double start_angle;
+    double advance_angle;
+
+    bool has_start_angle;
+    bool has_advance_angle;
+} NodeConfig;
+
+typedef enum {
+    HISTOGRAM_FUZZY,
+    HISTOGRAM_DISTRIBUTION
+} HistogramType;
+
+typedef struct {
+    HistogramType type;
+
+    bool show_grid;
+    bool show_axis_numbers;
+    bool fuzzy;
+
+    double x_min;
+    double x_max;
+    double y_min;
+    double y_max;
+
+    bool has_x_range;
+    bool has_y_range;
+} HistogramConfig;
+
+typedef struct {
+    ChartType type;
+
+    GlobalConfig global;
+    char *title;
+
+    union {
+        NodeConfig nodes;
+        HistogramConfig histogram;
+    } specific;
+} ChartConfig;
+
+typedef struct {
+    char *name;
+    char *identifier;
+    char color[7];
+    bool has_color;
+} Node;
+
+typedef struct {
+    bool bidirectional;
+    int from;
+    int to;
+} Connection;
+
+typedef struct {
+    char *name;
+
+    double a;
+    double b;
+    double c;
+    double d;
+
+    bool trapezoidal;
+
+    char color[7];
+    bool has_color;
+} FuzzyParameter;
+
+typedef struct {
+    char *name;
+    double min;
+    double max;
+    double amount;
+    char color[7];
+    bool has_color;
+} DistributionParameter;
+
+typedef struct {
+    union {
+        struct {
+            FuzzyParameter *parameters;
+            int parameter_count;
+        } fuzzy;
+
+        struct {
+            DistributionParameter *parameters;
+            int parameter_count;
+        } distribution;
+    } data;
+} HistogramGraph;
+
+typedef struct {
+    union {
+        struct {
+            Node *nodes;
+            int node_count;
+
+            Connection *connections;
+            int connection_count;
+        } nodes;
+
+        HistogramGraph histogram;
+    } data;
+} Graph;
+
+bool parse_file(
+    const char *filename,
+    Graph **graph,
+    ChartConfig **config
+);
+
+void free_graph(Graph *graph, ChartType type);
+void free_chart_config(ChartConfig *config);
+
+#endif
