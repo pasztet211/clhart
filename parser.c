@@ -17,9 +17,30 @@ typedef struct {
     int count;
 } Settings;
 
-void skip_whitespace(Parser *p) {
-    while (isspace((unsigned char)p->source[p->position])) {
-        p->position++;
+void skip_whitespace(Parser *parser) {
+    while (true) {
+        // Skip whitespace.
+        while (isspace((unsigned char)parser->source[parser->position])) {
+            parser->position++;
+        }
+
+        // Skip lines beginning with comment markers.
+        if (parser->source[parser->position] == '#' ||
+            (parser->source[parser->position] == '/' &&
+             parser->source[parser->position + 1] == '/') ||
+            (parser->source[parser->position] == '<' &&
+             parser->source[parser->position + 1] == '>')) {
+
+            // Advance to the end of the line.
+            while (parser->source[parser->position] != '\0' &&
+                   parser->source[parser->position] != '\n') {
+                parser->position++;
+            }
+
+            continue;
+        }
+
+        break;
     }
 }
 

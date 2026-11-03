@@ -392,6 +392,9 @@ static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
 }
 
+#define NODES_PER_RING 13
+#define MIN_LAYOUT_RADIUS 90
+
 static Position get_node_position(
     int index,
     int node_count,
@@ -399,16 +402,34 @@ static Position get_node_position(
     int width,
     int height
 ) {
+    int ring = index / NODES_PER_RING;
+    int index_in_ring = index % NODES_PER_RING;
+
+    int ring_count = (node_count + NODES_PER_RING - 1)
+        / NODES_PER_RING;
+
+    int nodes_in_ring = node_count - ring * NODES_PER_RING;
+
+    if (nodes_in_ring > NODES_PER_RING)
+        nodes_in_ring = NODES_PER_RING;
+
+    double radius = LAYOUT_RADIUS;
+
+    if (ring_count > 1) {
+        radius -= ring * 85;
+    }
+
     double advance = config->specific.nodes.has_advance_angle
         ? config->specific.nodes.advance_angle
-        : 360.0 / node_count;
+        : 360.0 / nodes_in_ring;
+
     double angle = (
-        config->specific.nodes.start_angle + index * advance
+        config->specific.nodes.start_angle + index_in_ring * advance
     ) * (PI / 180.0);
 
     return (Position) {
-        .x = (int)(width / 2.0 + cos(angle) * LAYOUT_RADIUS),
-        .y = (int)(height / 2.0 + sin(angle) * LAYOUT_RADIUS)
+        .x = (int)(width / 2.0 + cos(angle) * radius),
+        .y = (int)(height / 2.0 + sin(angle) * radius)
     };
 }
 
@@ -559,13 +580,15 @@ void node_graph_draw(
             width,
             height
         );
+        int ring = i / NODES_PER_RING;
+        int node_radius = NODE_RADIUS - ring * 5;
 
         set_color(renderer, 10, 10, 14);
         draw_filled_circle(
             renderer,
             position.x,
             position.y,
-            NODE_RADIUS + 3
+            node_radius + 3
         );
 
         if (graph->data.nodes.nodes[i].has_color) {
@@ -586,7 +609,7 @@ void node_graph_draw(
             renderer,
             position.x,
             position.y,
-            NODE_RADIUS
+            node_radius
         );
 
         const char *label = graph->data.nodes.nodes[i].name;

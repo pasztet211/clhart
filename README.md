@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2__ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v0.9.0-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v0.9.6-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -48,6 +48,14 @@ nodes {
 ### writing ranges:
 
 to write a range you should write the minimumn desired value then a semicolon (`;`) and the maximum desired value
+
+### writing comments:
+
+you can make a comment in 3 ways:
+
+1. starting a line with `<>`
+2. starting a line with `//`
+3. starting a line with `#`
 
 ### Global parameters and directives
 
