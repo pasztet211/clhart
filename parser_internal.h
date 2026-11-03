@@ -21,4 +21,6 @@ bool histogram_graph_parse(
     Graph *graph,
     ChartConfig *config
 );
+bool pie_graph_parse(Parser *parser, Graph *graph);
+
 #endif

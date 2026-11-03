@@ -6,7 +6,8 @@
 typedef enum {
     CHART_NODES,
     CHART_HISTOGRAM,
-    CHART_BAR
+    CHART_BAR,
+    CHART_PIE
 } ChartType;
 
 typedef struct {
@@ -44,6 +45,11 @@ typedef struct {
 } HistogramConfig;
 
 typedef struct {
+    bool show_percentages;
+    bool three_dimensional;
+} PieConfig;
+
+typedef struct {
     ChartType type;
 
     GlobalConfig global;
@@ -52,6 +58,7 @@ typedef struct {
     union {
         NodeConfig nodes;
         HistogramConfig histogram;
+        PieConfig pie;
     } specific;
 } ChartConfig;
 
@@ -106,6 +113,19 @@ typedef struct {
 } HistogramGraph;
 
 typedef struct {
+    char *name;
+    double value;
+
+    char color[7];
+    bool has_color;
+} PieSlice;
+
+typedef struct {
+    PieSlice *slices;
+    int slice_count;
+} PieGraph;
+
+typedef struct {
     union {
         struct {
             Node *nodes;
@@ -116,6 +136,8 @@ typedef struct {
         } nodes;
 
         HistogramGraph histogram;
+
+        PieGraph pie;
     } data;
 } Graph;
 

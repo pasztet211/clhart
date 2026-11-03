@@ -308,6 +308,24 @@ static bool apply_settings(
             hist->has_y_range = true;
         }
 
+        else if (config->type == CHART_PIE &&
+                strcmp(name, "show_percentages") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0)
+                return false;
+
+            config->specific.pie.show_percentages =
+                strcmp(value, "1") == 0;
+        }
+
+        else if (config->type == CHART_PIE &&
+                strcmp(name, "three_dimensional") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0)
+                return false;
+
+            config->specific.pie.three_dimensional =
+                strcmp(value, "1") == 0;
+        }
+
         else {
             fprintf(stderr, "unknown or incompatible setting: %s\n", name);
             return false;
@@ -459,6 +477,8 @@ static bool parse_graph(
                 config->type = CHART_NODES;
             } else if (expect_word(p, "histogram")) {
                 config->type = CHART_HISTOGRAM;
+            } else if (expect_word(p, "pie")) {
+                config->type = CHART_PIE;
             } else {
                 fprintf(stderr, "invalid or unsupported chart type\n");
                 goto cleanup;
@@ -542,6 +562,12 @@ static bool parse_graph(
 
         case CHART_HISTOGRAM:
             if (!histogram_graph_parse(p, graph, config)) {
+                goto cleanup;
+            }
+            break;
+        
+        case CHART_PIE:
+            if (!pie_graph_parse(p, graph)) {
                 goto cleanup;
             }
             break;
@@ -688,6 +714,14 @@ void free_graph(Graph *graph, ChartType type) {
             }
 
             free(graph->data.histogram.data.fuzzy.parameters);
+            break;
+
+        case CHART_PIE:
+            for (int i = 0; i < graph->data.pie.slice_count; i++) {
+                free(graph->data.pie.slices[i].name);
+            }
+
+            free(graph->data.pie.slices);
             break;
 
         case CHART_BAR:

@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "node_graph.h"
 #include "histogram_graph.h"
+#include "pie_graph.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -74,6 +75,10 @@ static void draw_legend(
                 count = graph->data.histogram.data.fuzzy.parameter_count;
             break;
 
+        case CHART_PIE:
+            count = graph->data.pie.slice_count;
+            break;
+
         case CHART_BAR:
             return;
     }
@@ -85,6 +90,8 @@ static void draw_legend(
 
         if (config->type == CHART_NODES) {
             name = graph->data.nodes.nodes[i].name;
+        } else if (config->type == CHART_PIE) {
+            name = graph->data.pie.slices[i].name;
         } else if (config->specific.histogram.type == HISTOGRAM_DISTRIBUTION) {
             name = graph->data.histogram.data.distribution.parameters[i].name;
         } else {
@@ -146,11 +153,19 @@ static void draw_legend(
                 break;
             }
 
+            case CHART_PIE: {
+                const PieSlice *object = &graph->data.pie.slices[i];
+
+                name = object->name;
+                color = object->color;
+                has_color = object->has_color;
+                break;
+            }
+
             default:
                 return;
         }
 
-        // Set object color
         if (has_color) {
             unsigned int rgb = (unsigned int)strtoul(color, NULL, 16);
 
@@ -161,6 +176,21 @@ static void draw_legend(
                 rgb & 0xFF,
                 255
             );
+        } else if (config->type == CHART_PIE) {
+            static const SDL_Color defaults[] = {
+                {50, 120, 255, 255},
+                {255, 90, 90, 255},
+                {70, 200, 130, 255},
+                {255, 190, 60, 255},
+                {180, 100, 255, 255},
+                {50, 210, 210, 255},
+                {255, 120, 200, 255},
+                {150, 160, 170, 255}
+            };
+
+            SDL_Color c = defaults[i % (sizeof(defaults) / sizeof(defaults[0]))];
+
+            SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
         } else {
             // Default object color
             SDL_SetRenderDrawColor(renderer, 50, 120, 255, 255);
@@ -228,6 +258,11 @@ bool render_graph(
                 fprintf(stderr, "cannot render an empty histogram\n");
                 return false;
             }
+            break;
+
+        case CHART_PIE:
+            if (graph->data.pie.slice_count == 0)
+                return false;
             break;
 
         case CHART_BAR:
@@ -315,6 +350,17 @@ bool render_graph(
 
             case CHART_HISTOGRAM:
                 histogram_graph_draw(
+                    renderer,
+                    font,
+                    graph,
+                    config,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT
+                );
+                break;
+
+            case CHART_PIE:
+                pie_graph_draw(
                     renderer,
                     font,
                     graph,

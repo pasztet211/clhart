@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2__ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v0.7.0-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v0.8.0-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -100,12 +100,29 @@ parameters {
 - egg sample:
 
 ```text
-parameters {
+nodes {
     [node display name] --- [optional node identifier] :[optional node hex color]:,
 
     [node identifier or name] <-> [node identifier or name],
     [node identifier or name] <-- [node identifier or name],
     [node identifier or name] --> [node identifier or name]
+}
+```
+
+#### pie:
+
+- its specific setup parameters are:
+    * show_precenteges
+    * three_dimensional
+
+- to make a slice write its name then `---` then the ammount of the slice and then an optional color
+
+- egg sample:
+
+```text
+slices {
+    [slice name] --- [ammount] :[optional hex color]:,
+    [slice name] --- [ammount] :[optional hex color]:
 }
 ```
 
