@@ -50,6 +50,16 @@ typedef struct {
 } PieConfig;
 
 typedef struct {
+    bool horizontal;
+    bool show_values;
+    bool show_axis_numbers;
+
+    double y_min;
+    double y_max;
+    bool has_y_range;
+} BarConfig;
+
+typedef struct {
     ChartType type;
 
     GlobalConfig global;
@@ -59,6 +69,7 @@ typedef struct {
         NodeConfig nodes;
         HistogramConfig histogram;
         PieConfig pie;
+        BarConfig bar;
     } specific;
 } ChartConfig;
 
@@ -126,6 +137,19 @@ typedef struct {
 } PieGraph;
 
 typedef struct {
+    char *name;
+    double value;
+
+    char color[7];
+    bool has_color;
+} Bar;
+
+typedef struct {
+    Bar *bars;
+    int bar_count;
+} BarGraph;
+
+typedef struct {
     union {
         struct {
             Node *nodes;
@@ -138,6 +162,8 @@ typedef struct {
         HistogramGraph histogram;
 
         PieGraph pie;
+
+        BarGraph bar;
     } data;
 } Graph;
 

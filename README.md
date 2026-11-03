@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2__ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v0.8.0-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v0.9.0-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -45,6 +45,10 @@ nodes {
 
 ## Usage:
 
+### writing ranges:
+
+to write a range you should write the minimumn desired value then a semicolon (`;`) and the maximum desired value
+
 ### Global parameters and directives
 
 #### Directives
@@ -84,7 +88,7 @@ parameters {
 
 ```text
 parameters {
-    [parameter display name] --- range start;range end|ammount :color:,
+    [parameter display name] --- range start;range end|amount :color:,
 }
 ```
 
@@ -112,17 +116,36 @@ nodes {
 #### pie:
 
 - its specific setup parameters are:
-    * show_precenteges
+    * show_precentaeges
     * three_dimensional
 
-- to make a slice write its name then `---` then the ammount of the slice and then an optional color
+- to make a slice write its name then `---` then the amount of the slice and then an optional color
 
 - egg sample:
 
 ```text
 slices {
-    [slice name] --- [ammount] :[optional hex color]:,
-    [slice name] --- [ammount] :[optional hex color]:
+    [slice name] --- [amount] :[optional hex color]:,
+    [slice name] --- [amount] :[optional hex color]:
+}
+```
+
+#### bar:
+
+- its specific setup parameters are:
+    * horizontal
+    * height_range
+    * show_values
+    * show_axis_numbers
+
+- to make a bar write its name then `---` then its value and an optional color
+
+- egg sample:
+
+```text
+bars {
+    [bar name] --- [value] :[optional hex color]:,
+    [bar name] --- [value] :[optional hex color]:
 }
 ```
 

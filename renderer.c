@@ -2,6 +2,7 @@
 #include "node_graph.h"
 #include "histogram_graph.h"
 #include "pie_graph.h"
+#include "bar_graph.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -80,7 +81,8 @@ static void draw_legend(
             break;
 
         case CHART_BAR:
-            return;
+            count = graph->data.bar.bar_count;
+            break;
     }
 
     int max_text_width = 0;
@@ -92,6 +94,8 @@ static void draw_legend(
             name = graph->data.nodes.nodes[i].name;
         } else if (config->type == CHART_PIE) {
             name = graph->data.pie.slices[i].name;
+        } else if (config->type == CHART_BAR) {
+            name = graph->data.bar.bars[i].name;
         } else if (config->specific.histogram.type == HISTOGRAM_DISTRIBUTION) {
             name = graph->data.histogram.data.distribution.parameters[i].name;
         } else {
@@ -155,6 +159,15 @@ static void draw_legend(
 
             case CHART_PIE: {
                 const PieSlice *object = &graph->data.pie.slices[i];
+
+                name = object->name;
+                color = object->color;
+                has_color = object->has_color;
+                break;
+            }
+
+            case CHART_BAR: {
+                const Bar *object = &graph->data.bar.bars[i];
 
                 name = object->name;
                 color = object->color;
@@ -266,6 +279,10 @@ bool render_graph(
             break;
 
         case CHART_BAR:
+            if (graph->data.bar.bar_count <= 0) {
+                fprintf(stderr, "cannot render an empty bar chart\n");
+                return false;
+            }
             break;
     }
 
@@ -371,6 +388,14 @@ bool render_graph(
                 break;
 
             case CHART_BAR:
+                bar_graph_draw(
+                    renderer,
+                    font,
+                    graph,
+                    config,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT
+                );
                 break;
         }
         draw_legend(renderer, font, graph, config);

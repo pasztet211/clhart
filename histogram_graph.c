@@ -474,6 +474,37 @@ static void draw_grid_level(
     }
 }
 
+static void draw_histogram_text(
+    SDL_Renderer *renderer,
+    TTF_Font *font,
+    const char *text,
+    int x,
+    int y,
+    SDL_Color color
+) {
+    SDL_Surface *surface = TTF_RenderUTF8_Blended(
+        font, text, color
+    );
+
+    if (!surface)
+        return;
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(
+        renderer, surface
+    );
+
+    if (texture) {
+        SDL_Rect destination = {
+            x, y, surface->w, surface->h
+        };
+
+        SDL_RenderCopy(renderer, texture, NULL, &destination);
+        SDL_DestroyTexture(texture);
+    }
+
+    SDL_FreeSurface(surface);
+}
+
 void histogram_graph_draw(
     SDL_Renderer *renderer,
     TTF_Font *font,
@@ -568,6 +599,61 @@ void histogram_graph_draw(
         right, bottom,
         3
     );
+
+    if (settings->show_axis_numbers) {
+        SDL_Color text_color = {220, 220, 220, 255};
+
+        double x_step = calculate_grid_step(x_min, x_max);
+        double y_step = calculate_grid_step(y_min, y_max);
+
+        // X-axis numbers
+        for (double value = ceil(x_min / x_step) * x_step;
+            value <= x_max;
+            value += x_step) {
+
+            char label[32];
+            snprintf(label, sizeof(label), "%.4g", value);
+
+            int x = (int)map_x(
+                value, x_min, x_max, left, plot_width
+            );
+
+            int text_width, text_height;
+
+            if (TTF_SizeUTF8(font, label, &text_width, &text_height) == 0) {
+                draw_histogram_text(
+                    renderer, font, label,
+                    x - text_width / 2,
+                    (int)bottom + 10,
+                    text_color
+                );
+            }
+        }
+
+        // Y-axis numbers
+        for (double value = ceil(y_min / y_step) * y_step;
+            value <= y_max;
+            value += y_step) {
+
+            char label[32];
+            snprintf(label, sizeof(label), "%.4g", value);
+
+            int y = (int)map_y(
+                value, y_min, y_max, top, plot_height
+            );
+
+            int text_width, text_height;
+
+            if (TTF_SizeUTF8(font, label, &text_width, &text_height) == 0) {
+                draw_histogram_text(
+                    renderer, font, label,
+                    (int)left - text_width - 10,
+                    y - text_height / 2,
+                    text_color
+                );
+            }
+        }
+    }
 
     if (settings->type == HISTOGRAM_DISTRIBUTION) {
         SDL_Rect clip = {

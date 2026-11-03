@@ -326,6 +326,48 @@ static bool apply_settings(
                 strcmp(value, "1") == 0;
         }
 
+        else if (config->type == CHART_BAR &&
+                strcmp(name, "horizontal") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
+                fprintf(stderr, "horizontal must be 0 or 1\n");
+                return false;
+            }
+
+            config->specific.bar.horizontal = strcmp(value, "1") == 0;
+        }
+
+        else if (config->type == CHART_BAR &&
+                strcmp(name, "show_values") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
+                fprintf(stderr, "show_values must be 0 or 1\n");
+                return false;
+            }
+
+            config->specific.bar.show_values = strcmp(value, "1") == 0;
+        }
+
+        else if (config->type == CHART_BAR &&
+                strcmp(name, "show_axis_numbers") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
+                fprintf(stderr, "show_axis_numbers must be 0 or 1\n");
+                return false;
+            }
+
+            config->specific.bar.show_axis_numbers = strcmp(value, "1") == 0;
+        }
+
+        else if (config->type == CHART_BAR &&
+                strcmp(name, "height_range") == 0) {
+            BarConfig *bar = &config->specific.bar;
+
+            if (!parse_range(value, &bar->y_min, &bar->y_max)) {
+                fprintf(stderr, "invalid height_range: %s\n", value);
+                return false;
+            }
+
+            bar->has_y_range = true;
+        }
+
         else {
             fprintf(stderr, "unknown or incompatible setting: %s\n", name);
             return false;
@@ -479,6 +521,8 @@ static bool parse_graph(
                 config->type = CHART_HISTOGRAM;
             } else if (expect_word(p, "pie")) {
                 config->type = CHART_PIE;
+            } else if (expect_word(p, "bar")) {
+                config->type = CHART_BAR;
             } else {
                 fprintf(stderr, "invalid or unsupported chart type\n");
                 goto cleanup;
@@ -568,6 +612,12 @@ static bool parse_graph(
         
         case CHART_PIE:
             if (!pie_graph_parse(p, graph)) {
+                goto cleanup;
+            }
+            break;
+
+        case CHART_BAR:
+            if (!bar_graph_parse(p, graph)) {
                 goto cleanup;
             }
             break;
@@ -725,7 +775,11 @@ void free_graph(Graph *graph, ChartType type) {
             break;
 
         case CHART_BAR:
-            /* TODO: Add bar chart cleanup when implemented. */
+            for (int i = 0; i < graph->data.bar.bar_count; i++) {
+                free(graph->data.bar.bars[i].name);
+            }
+
+            free(graph->data.bar.bars);
             break;
     }
 
