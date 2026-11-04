@@ -25,8 +25,7 @@ void skip_whitespace(Parser *parser) {
         }
 
         // Skip lines beginning with comment markers.
-        if (parser->source[parser->position] == '#' ||
-            (parser->source[parser->position] == '/' &&
+        if ((parser->source[parser->position] == '/' &&
              parser->source[parser->position + 1] == '/') ||
             (parser->source[parser->position] == '<' &&
              parser->source[parser->position + 1] == '>')) {
