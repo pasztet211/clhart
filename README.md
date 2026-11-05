@@ -123,7 +123,7 @@ nodes {
 #### pie:
 
 - its specific setup parameters are:
-    * show_precentaeges
+    * show_percentaeges
     * three_dimensional
 
 - to make a slice write its name then `---` then the amount of the slice and then an optional color
