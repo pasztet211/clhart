@@ -7,6 +7,7 @@ typedef enum {
     CHART_NODES,
     CHART_HISTOGRAM,
     CHART_BAR,
+    CHART_COLUMN,
     CHART_PIE,
     CHART_COMBINATION
 } ChartType;
@@ -60,6 +61,15 @@ typedef struct {
     bool has_y_range;
 } BarConfig;
 
+typedef struct {
+    bool show_values;
+    bool show_axis_numbers;
+
+    double y_min;
+    double y_max;
+    bool has_y_range;
+} ColumnConfig;
+
 typedef struct Graph Graph;
 typedef struct ChartConfig ChartConfig;
 
@@ -79,6 +89,7 @@ struct ChartConfig {
         PieConfig pie;
         BarConfig bar;
         CombinationConfig combination;
+        ColumnConfig column;
     } specific;
 };
 
@@ -159,6 +170,25 @@ typedef struct {
 } BarGraph;
 
 typedef struct {
+    char *name;
+
+    double *values;
+    int value_count;
+
+    char color[7];
+    bool has_color;
+} ColumnSeries;
+
+typedef struct {
+    ColumnSeries *series;
+    int series_count;
+
+    char **categories;
+    int category_count;
+    bool has_categories;
+} ColumnGraph;
+
+typedef struct {
     Graph *graph;
     ChartConfig *config;
 } CombinationChart;
@@ -182,6 +212,7 @@ struct Graph {
         PieGraph pie;
         BarGraph bar;
         CombinationGraph combination;
+        ColumnGraph column;
     } data;
 };
 

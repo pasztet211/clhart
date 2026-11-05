@@ -1,8 +1,8 @@
 ![C23](https://img.shields.io/badge/C-C23-blue?style=flat-square)
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
-![SDL2_ttf](https://img.shields.io/badge/SDL2__ttf-required-green?style=flat-square)
+![SDL2_ttf](https://img.shields.io/badge/SDL2_ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v1.0.0-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.1.0-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -153,6 +153,34 @@ slices {
 bars {
     [bar name] --- [value] :[optional hex color]:,
     [bar name] --- [value] :[optional hex color]:
+}
+```
+
+#### column:
+
+- its specific setup parameters are:
+    * show_values
+    * show_axis_numbers
+    * y_min
+    * y_max
+
+- to make a column chart, first define its categories, then define its data series
+- each series has a name, followed by `---`, its values separated by `;`, and an optional color
+- each value corresponds to a category in the same position
+- if categories are not specified, they are generated automatically
+
+- egg sample:
+
+```text
+categories {
+    [category name],
+    [category name],
+    [category name]
+}
+
+columns {
+    [series name] --- [value];[value];[value] :[optional hex color]:,
+    [series name] --- [value];[value];[value] :[optional hex color]:
 }
 ```
 

@@ -4,6 +4,7 @@
 #include "pie_graph.h"
 #include "bar_graph.h"
 #include "combination_graph_render.h"
+#include "column_graph.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -86,6 +87,10 @@ void draw_legend(
         case CHART_BAR:
             count = graph->data.bar.bar_count;
             break;
+        
+        case CHART_COLUMN:
+            count = graph->data.column.series_count;
+            break;
     }
 
     int max_text_width = 0;
@@ -99,6 +104,8 @@ void draw_legend(
             name = graph->data.pie.slices[i].name;
         } else if (config->type == CHART_BAR) {
             name = graph->data.bar.bars[i].name;
+        } else if (config->type == CHART_COLUMN) {
+            name = graph->data.column.series[i].name;
         } else if (config->specific.histogram.type == HISTOGRAM_DISTRIBUTION) {
             name = graph->data.histogram.data.distribution.parameters[i].name;
         } else {
@@ -171,6 +178,16 @@ void draw_legend(
 
             case CHART_BAR: {
                 const Bar *object = &graph->data.bar.bars[i];
+
+                name = object->name;
+                color = object->color;
+                has_color = object->has_color;
+                break;
+            }
+
+            case CHART_COLUMN: {
+                const ColumnSeries *object =
+                    &graph->data.column.series[i];
 
                 name = object->name;
                 color = object->color;
@@ -294,6 +311,14 @@ bool render_graph(
                 return false;
             }
             break;
+
+        case CHART_COLUMN:
+            if (graph->data.column.category_count <= 0 ||
+                graph->data.column.series_count <= 0) {
+                fprintf(stderr, "cannot render an empty column chart\n");
+                return false;
+            }
+            break;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -410,6 +435,17 @@ bool render_graph(
             
             case CHART_COMBINATION:
                 combination_graph_draw(
+                    renderer,
+                    font,
+                    graph,
+                    config,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT
+                );
+                break;
+            
+            case CHART_COLUMN:
+                column_graph_draw(
                     renderer,
                     font,
                     graph,

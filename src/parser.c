@@ -399,6 +399,38 @@ static bool apply_settings(
                 strcmp(value, "1") == 0;
         }
 
+        else if (config->type == CHART_COLUMN &&
+                strcmp(name, "show_values") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
+                fprintf(stderr, "show_values must be 0 or 1\n");
+                return false;
+            }
+
+            config->specific.column.show_values = strcmp(value, "1") == 0;
+        }
+
+        else if (config->type == CHART_COLUMN &&
+                strcmp(name, "show_axis_numbers") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
+                fprintf(stderr, "show_axis_numbers must be 0 or 1\n");
+                return false;
+            }
+
+            config->specific.column.show_axis_numbers = strcmp(value, "1") == 0;
+        }
+
+        else if (config->type == CHART_COLUMN &&
+                strcmp(name, "height_range") == 0) {
+            ColumnConfig *column = &config->specific.column;
+
+            if (!parse_range(value, &column->y_min, &column->y_max)) {
+                fprintf(stderr, "invalid height_range: %s\n", value);
+                return false;
+            }
+
+            column->has_y_range = true;
+        }
+
         else {
             fprintf(stderr, "unknown or incompatible setting: %s\n", name);
             return false;
@@ -556,6 +588,8 @@ bool parse_graph(
                 config->type = CHART_BAR;
             } else if (expect_word(p, "combination")) {
                 config->type = CHART_COMBINATION;
+            } else if (expect_word(p, "column")) {
+                config->type = CHART_COLUMN;
             } else {
                 fprintf(stderr, "invalid or unsupported chart type\n");
                 goto cleanup;
@@ -657,6 +691,12 @@ bool parse_graph(
 
         case CHART_COMBINATION:
             if (!combination_graph_parse(p, graph, config)) {
+                goto cleanup;
+            }
+            break;
+        
+        case CHART_COLUMN:
+            if (!column_graph_parse(p, graph)) {
                 goto cleanup;
             }
             break;
@@ -833,6 +873,22 @@ void free_graph(Graph *graph, ChartType type) {
             }
 
             free(graph->data.combination.charts);
+            break;
+        
+        case CHART_COLUMN:
+            for (int i = 0; i < graph->data.column.series_count; i++) {
+                ColumnSeries *series = &graph->data.column.series[i];
+
+                free(series->name);
+                free(series->values);
+            }
+
+            for (int i = 0; i < graph->data.column.category_count; i++) {
+                free(graph->data.column.categories[i]);
+            }
+
+            free(graph->data.column.series);
+            free(graph->data.column.categories);
             break;
     }
 
