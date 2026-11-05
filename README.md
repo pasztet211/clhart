@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2__ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v0.9.7-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.0.0-orange?style=flat-square)
 
 # Clhart
 graphing software/language
