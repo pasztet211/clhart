@@ -405,6 +405,14 @@ void pie_graph_draw(
             squash
         );
 
+        angle += advance;
+    }
+
+    for (int i = 0; i < pie->slice_count; i++) {
+        const PieSlice *slice = &pie->slices[i];
+
+        double percentage = slice->value / total * 100.0;
+        double advance = percentage / 100.0 * 2.0 * PI;
         if (settings->show_percentages && slice->value > 0.0) {
             double middle_angle = angle + advance / 2.0;
 

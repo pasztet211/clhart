@@ -55,7 +55,6 @@ you can make a comment in 3 ways:
 
 1. starting a line with `<>`
 2. starting a line with `//`
-3. starting a line with `#`
 
 ### Global parameters and directives
 
