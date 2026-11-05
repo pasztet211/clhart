@@ -246,7 +246,7 @@ static void draw_percentage(
     char text[16];
     snprintf(text, sizeof(text), "%.1f%%", percentage);
 
-    SDL_Color text_color = {255, 255, 255, 255};
+    SDL_Color text_color = {0, 0, 0, 255};
 
     SDL_Surface *surface = TTF_RenderUTF8_Blended(
         font, text, text_color
