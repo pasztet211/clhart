@@ -23,5 +23,15 @@ bool histogram_graph_parse(
 );
 bool pie_graph_parse(Parser *parser, Graph *graph);
 bool bar_graph_parse(Parser *p, Graph *graph);
+bool combination_graph_parse(
+    Parser *p,
+    Graph *graph,
+    ChartConfig *config
+);
+bool parse_graph(
+    Parser *p,
+    Graph *graph,
+    ChartConfig *config
+);
 
 #endif

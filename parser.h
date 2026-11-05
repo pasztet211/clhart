@@ -7,7 +7,8 @@ typedef enum {
     CHART_NODES,
     CHART_HISTOGRAM,
     CHART_BAR,
-    CHART_PIE
+    CHART_PIE,
+    CHART_COMBINATION
 } ChartType;
 
 typedef struct {
@@ -59,7 +60,14 @@ typedef struct {
     bool has_y_range;
 } BarConfig;
 
+typedef struct Graph Graph;
+typedef struct ChartConfig ChartConfig;
+
 typedef struct {
+    bool show_sub_titles;
+} CombinationConfig;
+
+struct ChartConfig {
     ChartType type;
 
     GlobalConfig global;
@@ -70,8 +78,9 @@ typedef struct {
         HistogramConfig histogram;
         PieConfig pie;
         BarConfig bar;
+        CombinationConfig combination;
     } specific;
-} ChartConfig;
+};
 
 typedef struct {
     char *name;
@@ -150,6 +159,16 @@ typedef struct {
 } BarGraph;
 
 typedef struct {
+    Graph *graph;
+    ChartConfig *config;
+} CombinationChart;
+
+typedef struct {
+    CombinationChart *charts;
+    int chart_count;
+} CombinationGraph;
+
+struct Graph {
     union {
         struct {
             Node *nodes;
@@ -160,12 +179,11 @@ typedef struct {
         } nodes;
 
         HistogramGraph histogram;
-
         PieGraph pie;
-
         BarGraph bar;
+        CombinationGraph combination;
     } data;
-} Graph;
+};
 
 bool parse_file(
     const char *filename,

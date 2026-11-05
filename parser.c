@@ -388,6 +388,17 @@ static bool apply_settings(
             bar->has_y_range = true;
         }
 
+        else if (config->type == CHART_COMBINATION &&
+                strcmp(name, "show_sub_titles") == 0) {
+            if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
+                fprintf(stderr, "show_sub_titles must be 0 or 1\n");
+                return false;
+            }
+
+            config->specific.combination.show_sub_titles =
+                strcmp(value, "1") == 0;
+        }
+
         else {
             fprintf(stderr, "unknown or incompatible setting: %s\n", name);
             return false;
@@ -492,7 +503,7 @@ char *parse_name(Parser *p) {
     return name;
 }
 
-static bool parse_graph(
+bool parse_graph(
     Parser *p,
     Graph *graph,
     ChartConfig *config
@@ -543,6 +554,8 @@ static bool parse_graph(
                 config->type = CHART_PIE;
             } else if (expect_word(p, "bar")) {
                 config->type = CHART_BAR;
+            } else if (expect_word(p, "combination")) {
+                config->type = CHART_COMBINATION;
             } else {
                 fprintf(stderr, "invalid or unsupported chart type\n");
                 goto cleanup;
@@ -642,16 +655,15 @@ static bool parse_graph(
             }
             break;
 
+        case CHART_COMBINATION:
+            if (!combination_graph_parse(p, graph, config)) {
+                goto cleanup;
+            }
+            break;
+
         default:
             fprintf(stderr, "unsupported chart type\n");
             goto cleanup;
-    }
-
-    skip_whitespace(p);
-
-    if (p->source[p->position] != '\0') {
-        fprintf(stderr, "unexpected content after graph\n");
-        goto cleanup;
     }
 
     success = true;
@@ -742,6 +754,15 @@ bool parse_file(
 
     bool success = parse_graph(&parser, *graph, *config);
 
+    if (success) {
+        skip_whitespace(&parser);
+
+        if (parser.source[parser.position] != '\0') {
+            fprintf(stderr, "unexpected content after graph\n");
+            success = false;
+        }
+    }
+    
     free(source);
 
     if (!success) {
@@ -800,6 +821,18 @@ void free_graph(Graph *graph, ChartType type) {
             }
 
             free(graph->data.bar.bars);
+            break;
+        
+        case CHART_COMBINATION:
+            for (int i = 0; i < graph->data.combination.chart_count; i++) {
+                CombinationChart *chart =
+                    &graph->data.combination.charts[i];
+
+                free_graph(chart->graph, chart->config->type);
+                free_chart_config(chart->config);
+            }
+
+            free(graph->data.combination.charts);
             break;
     }
 

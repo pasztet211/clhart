@@ -157,6 +157,47 @@ bars {
 }
 ```
 
+#### combination:
+
+- its specific setup parameters are
+    * show_sub_titles
+
+- to make a sub charts add `{ chart data }` in your main data
+
+- egg sample:
+
+```text
+charts {
+    {
+        .type {pie}
+        .title {title}
+
+        .setup {
+            three_dimensional --- 1,
+            show_percentages --- 1
+        }
+
+        slices {
+            data
+        }
+    },
+    {
+        .type {bar}
+        .title {title}
+
+        .setup {
+            horizontal --- 1,
+            show_axis_numbers --- 1,
+            legend --- 1
+        }
+
+        bars {
+            data
+        }
+    }
+}
+```
+
 # Made by:
 
 - [pasztet211](https://github.com/pasztet211) ![pasztet](https://img.shields.io/badge/creator-orange?style=flat-square)

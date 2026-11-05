@@ -203,11 +203,11 @@ void bar_graph_draw(
 
     double value_min = settings->has_y_range
         ? settings->y_min
-        : bar_graph->bars[0].value;
+        : 0.0;
 
     double value_max = settings->has_y_range
         ? settings->y_max
-        : bar_graph->bars[0].value;
+        : 0.0;
 
     if (!settings->has_y_range) {
         for (int i = 1; i < count; i++) {

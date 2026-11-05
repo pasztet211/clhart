@@ -3,6 +3,7 @@
 #include "histogram_graph.h"
 #include "pie_graph.h"
 #include "bar_graph.h"
+#include "combination_graph_render.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -10,17 +11,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define WINDOW_WIDTH 1000
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH RENDERER_BASE_WIDTH
+#define WINDOW_HEIGHT RENDERER_BASE_HEIGHT
 
 static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
 }
 
-static void draw_title(
+void draw_title(
     SDL_Renderer *renderer,
     TTF_Font *font,
-    const char *title
+    const char *title,
+    int width
 ) {
     if (!title || title[0] == '\0') {
         return;
@@ -38,7 +40,7 @@ static void draw_title(
 
     if (texture) {
         SDL_Rect destination = {
-            (WINDOW_WIDTH - surface->w) / 2,
+            (width - surface->w) / 2,
             20,
             surface->w,
             surface->h
@@ -53,11 +55,12 @@ static void draw_title(
     SDL_FreeSurface(surface);
 }
 
-static void draw_legend(
+void draw_legend(
     SDL_Renderer *renderer,
     TTF_Font *font,
     const Graph *graph,
-    const ChartConfig *config
+    const ChartConfig *config,
+    int width
 ) {
     if (!config->global.legend)
         return;
@@ -121,7 +124,7 @@ static void draw_legend(
     int legend_height =
         padding * 2 + count * row_height;
 
-    int legend_x = WINDOW_WIDTH - legend_width - 20;
+    int legend_x = width - legend_width - 20;
     int legend_y = 20;
 
     for (int i = 0; i < count; i++) {
@@ -284,6 +287,13 @@ bool render_graph(
                 return false;
             }
             break;
+        
+        case CHART_COMBINATION:
+            if (graph->data.combination.chart_count <= 0) {
+                fprintf(stderr, "cannot render an empty combination chart\n");
+                return false;
+            }
+            break;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -297,7 +307,7 @@ bool render_graph(
         return false;
     }
 
-    TTF_Font *font = TTF_OpenFont(font_path, 20);
+    TTF_Font *font = TTF_OpenFont(font_path, RENDERER_BASE_FONT_SIZE);
 
     if (!font) {
         fprintf(stderr, "could not load font: %s\n", TTF_GetError());
@@ -397,9 +407,22 @@ bool render_graph(
                     WINDOW_HEIGHT
                 );
                 break;
+            
+            case CHART_COMBINATION:
+                combination_graph_draw(
+                    renderer,
+                    font,
+                    graph,
+                    config,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT
+                );
+                break;
         }
-        draw_legend(renderer, font, graph, config);
-        draw_title(renderer, font, config->title);
+        if (config->type != CHART_COMBINATION) {
+            draw_legend(renderer, font, graph, config, WINDOW_WIDTH);
+        }
+        draw_title(renderer, font, config->title, WINDOW_WIDTH);
 
         SDL_RenderPresent(renderer);
     }
