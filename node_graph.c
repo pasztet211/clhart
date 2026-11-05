@@ -400,7 +400,8 @@ static Position get_node_position(
     int node_count,
     const ChartConfig *config,
     int width,
-    int height
+    int height,
+    double scale
 ) {
     int ring = index / NODES_PER_RING;
     int index_in_ring = index % NODES_PER_RING;
@@ -413,10 +414,10 @@ static Position get_node_position(
     if (nodes_in_ring > NODES_PER_RING)
         nodes_in_ring = NODES_PER_RING;
 
-    double radius = LAYOUT_RADIUS;
+    double radius = LAYOUT_RADIUS * scale;
 
     if (ring_count > 1) {
-        radius -= ring * 85;
+        radius -= ring * 85 * scale;
     }
 
     double advance = config->specific.nodes.has_advance_angle
@@ -481,10 +482,11 @@ static void draw_arrowhead(
     double tip_x,
     double tip_y,
     double direction_x,
-    double direction_y
+    double direction_y,
+    double scale
 ) {
-    const double length = 12.0;
-    const double half_width = 6.0;
+    const double length = 12.0 * scale;
+    const double half_width = 6.0 * scale;
     double base_x = tip_x - direction_x * length;
     double base_y = tip_y - direction_y * length;
     double perpendicular_x = -direction_y * half_width;
@@ -510,7 +512,10 @@ static void draw_connection(
     SDL_Renderer *renderer,
     const Connection *connection,
     Position from,
-    Position to
+    Position to,
+    double from_radius,
+    double to_radius,
+    double scale
 ) {
     double dx = to.x - from.x;
     double dy = to.y - from.y;
@@ -522,10 +527,10 @@ static void draw_connection(
 
     double direction_x = dx / distance;
     double direction_y = dy / distance;
-    double start_x = from.x + direction_x * (NODE_RADIUS + 2);
-    double start_y = from.y + direction_y * (NODE_RADIUS + 2);
-    double end_x = to.x - direction_x * (NODE_RADIUS + 2);
-    double end_y = to.y - direction_y * (NODE_RADIUS + 2);
+    double start_x = from.x + direction_x * (from_radius + 2 * scale);
+    double start_y = from.y + direction_y * (from_radius + 2 * scale);
+    double end_x = to.x - direction_x * (to_radius + 2 * scale);
+    double end_y = to.y - direction_y * (to_radius + 2 * scale);
 
     SDL_RenderDrawLine(
         renderer,
@@ -535,10 +540,14 @@ static void draw_connection(
         (int)end_y
     );
 
-    draw_arrowhead(renderer, end_x, end_y, direction_x, direction_y);
+    draw_arrowhead(
+        renderer, end_x, end_y, direction_x, direction_y, scale
+    );
 
     if (connection->bidirectional) {
-        draw_arrowhead(renderer, start_x, start_y, -direction_x, -direction_y);
+        draw_arrowhead(
+            renderer, start_x, start_y, -direction_x, -direction_y, scale
+        );
     }
 }
 
@@ -550,26 +559,59 @@ void node_graph_draw(
     int width,
     int height
 ) {
+    double scale = fmin(
+        width / 1000.0,
+        height / 800.0
+    );
+
+    if (scale <= 0.0)
+        return;
+
     set_color(renderer, 150, 155, 170);
 
     for (int i = 0; i < graph->data.nodes.connection_count; i++) {
         const Connection *connection = &graph->data.nodes.connections[i];
+        int from_ring = connection->from / NODES_PER_RING;
+        int to_ring = connection->to / NODES_PER_RING;
+        int from_radius = (int)lround(
+            (NODE_RADIUS - from_ring * 5) * scale
+        );
+        int to_radius = (int)lround(
+            (NODE_RADIUS - to_ring * 5) * scale
+        );
+
+        if (from_radius < 1)
+            from_radius = 1;
+
+        if (to_radius < 1)
+            to_radius = 1;
+
         Position from = get_node_position(
             connection->from,
             graph->data.nodes.node_count,
             config,
             width,
-            height
+            height,
+            scale
         );
         Position to = get_node_position(
             connection->to,
             graph->data.nodes.node_count,
             config,
             width,
-            height
+            height,
+            scale
         );
 
-        draw_connection(renderer, connection, from, to);
+        draw_connection(
+            renderer,
+            connection,
+            from,
+            to,
+            from_radius,
+            to_radius,
+            scale
+        );
     }
 
     for (int i = 0; i < graph->data.nodes.node_count; i++) {
@@ -578,10 +620,16 @@ void node_graph_draw(
             graph->data.nodes.node_count,
             config,
             width,
-            height
+            height,
+            scale
         );
         int ring = i / NODES_PER_RING;
-        int node_radius = NODE_RADIUS - ring * 5;
+        int node_radius = (int)lround(
+            (NODE_RADIUS - ring * 5) * scale
+        );
+
+        if (node_radius < 1)
+            node_radius = 1;
 
         set_color(renderer, 10, 10, 14);
         draw_filled_circle(
@@ -624,7 +672,7 @@ void node_graph_draw(
             font,
             label,
             position.x,
-            position.y + NODE_RADIUS + 8
+            position.y + node_radius + (int)lround(8 * scale)
         );
     }
 }
