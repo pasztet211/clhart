@@ -399,29 +399,40 @@ static bool apply_settings(
                 strcmp(value, "1") == 0;
         }
 
-        else if (config->type == CHART_COLUMN &&
+        else if ((config->type == CHART_COLUMN ||
+                  config->type == CHART_LINE) &&
                 strcmp(name, "show_values") == 0) {
             if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
                 fprintf(stderr, "show_values must be 0 or 1\n");
                 return false;
             }
 
-            config->specific.column.show_values = strcmp(value, "1") == 0;
+            ColumnConfig *series = config->type == CHART_COLUMN
+                ? &config->specific.column
+                : &config->specific.line;
+            series->show_values = strcmp(value, "1") == 0;
         }
 
-        else if (config->type == CHART_COLUMN &&
+        else if ((config->type == CHART_COLUMN ||
+                  config->type == CHART_LINE) &&
                 strcmp(name, "show_axis_numbers") == 0) {
             if (strcmp(value, "0") != 0 && strcmp(value, "1") != 0) {
                 fprintf(stderr, "show_axis_numbers must be 0 or 1\n");
                 return false;
             }
 
-            config->specific.column.show_axis_numbers = strcmp(value, "1") == 0;
+            ColumnConfig *series = config->type == CHART_COLUMN
+                ? &config->specific.column
+                : &config->specific.line;
+            series->show_axis_numbers = strcmp(value, "1") == 0;
         }
 
-        else if (config->type == CHART_COLUMN &&
+        else if ((config->type == CHART_COLUMN ||
+                  config->type == CHART_LINE) &&
                 strcmp(name, "height_range") == 0) {
-            ColumnConfig *column = &config->specific.column;
+            ColumnConfig *column = config->type == CHART_COLUMN
+                ? &config->specific.column
+                : &config->specific.line;
 
             if (!parse_range(value, &column->y_min, &column->y_max)) {
                 fprintf(stderr, "invalid height_range: %s\n", value);
@@ -590,6 +601,8 @@ bool parse_graph(
                 config->type = CHART_COMBINATION;
             } else if (expect_word(p, "column")) {
                 config->type = CHART_COLUMN;
+            } else if (expect_word(p, "line")) {
+                config->type = CHART_LINE;
             } else {
                 fprintf(stderr, "invalid or unsupported chart type\n");
                 goto cleanup;
@@ -697,6 +710,12 @@ bool parse_graph(
         
         case CHART_COLUMN:
             if (!column_graph_parse(p, graph)) {
+                goto cleanup;
+            }
+            break;
+
+        case CHART_LINE:
+            if (!line_graph_parse(p, graph)) {
                 goto cleanup;
             }
             break;
@@ -876,19 +895,26 @@ void free_graph(Graph *graph, ChartType type) {
             break;
         
         case CHART_COLUMN:
-            for (int i = 0; i < graph->data.column.series_count; i++) {
-                ColumnSeries *series = &graph->data.column.series[i];
+        case CHART_LINE:
+            {
+                ColumnGraph *series_graph = type == CHART_COLUMN
+                    ? &graph->data.column
+                    : &graph->data.line;
 
-                free(series->name);
-                free(series->values);
+                for (int i = 0; i < series_graph->series_count; i++) {
+                    ColumnSeries *series = &series_graph->series[i];
+
+                    free(series->name);
+                    free(series->values);
+                }
+
+                for (int i = 0; i < series_graph->category_count; i++) {
+                    free(series_graph->categories[i]);
+                }
+
+                free(series_graph->series);
+                free(series_graph->categories);
             }
-
-            for (int i = 0; i < graph->data.column.category_count; i++) {
-                free(graph->data.column.categories[i]);
-            }
-
-            free(graph->data.column.series);
-            free(graph->data.column.categories);
             break;
     }
 

@@ -34,5 +34,6 @@ bool parse_graph(
     ChartConfig *config
 );
 bool column_graph_parse(Parser *p, Graph *graph);
+bool line_graph_parse(Parser *p, Graph *graph);
 
 #endif

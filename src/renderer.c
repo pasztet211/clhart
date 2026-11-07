@@ -5,6 +5,7 @@
 #include "bar_graph.h"
 #include "combination_graph_render.h"
 #include "column_graph.h"
+#include "line_graph.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -96,6 +97,7 @@ void draw_legend(
             break;
         
         case CHART_COLUMN:
+        case CHART_LINE:
             count = graph->data.column.series_count;
             break;
     }
@@ -113,6 +115,8 @@ void draw_legend(
             name = graph->data.bar.bars[i].name;
         } else if (config->type == CHART_COLUMN) {
             name = graph->data.column.series[i].name;
+        } else if (config->type == CHART_LINE) {
+            name = graph->data.line.series[i].name;
         } else if (config->specific.histogram.type == HISTOGRAM_DISTRIBUTION) {
             name = graph->data.histogram.data.distribution.parameters[i].name;
         } else {
@@ -196,6 +200,16 @@ void draw_legend(
             case CHART_COLUMN: {
                 const ColumnSeries *object =
                     &graph->data.column.series[i];
+
+                name = object->name;
+                color = object->color;
+                has_color = object->has_color;
+                break;
+            }
+
+            case CHART_LINE: {
+                const ColumnSeries *object =
+                    &graph->data.line.series[i];
 
                 name = object->name;
                 color = object->color;
@@ -327,6 +341,14 @@ bool render_graph(
                 return false;
             }
             break;
+
+        case CHART_LINE:
+            if (graph->data.line.category_count <= 0 ||
+                graph->data.line.series_count <= 0) {
+                fprintf(stderr, "cannot render an empty line chart\n");
+                return false;
+            }
+            break;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -454,6 +476,17 @@ bool render_graph(
             
             case CHART_COLUMN:
                 column_graph_draw(
+                    renderer,
+                    font,
+                    graph,
+                    config,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT
+                );
+                break;
+
+            case CHART_LINE:
+                line_graph_draw(
                     renderer,
                     font,
                     graph,

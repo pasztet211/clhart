@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2_ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v1.1.0-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.2.0-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -179,6 +179,25 @@ categories {
 }
 
 columns {
+    [series name] --- [value];[value];[value] :[optional hex color]:,
+    [series name] --- [value];[value];[value] :[optional hex color]:
+}
+```
+
+#### line:
+
+- line charts use the same `categories` and series syntax as column charts
+- each series is drawn as a line connecting its values across the categories
+- setup parameters are `show_values`, `show_axis_numbers`, and `height_range`
+
+```text
+categories {
+    [category name],
+    [category name],
+    [category name]
+}
+
+lines {
     [series name] --- [value];[value];[value] :[optional hex color]:,
     [series name] --- [value];[value];[value] :[optional hex color]:
 }

@@ -93,7 +93,7 @@ static bool append_column_value(
     return true;
 }
 
-static bool parse_column_color(
+static bool parse_series_color(
     Parser *p,
     ColumnSeries *series
 ) {
@@ -119,7 +119,7 @@ static bool parse_column_color(
     return true;
 }
 
-static bool parse_column_series(
+static bool parse_series(
     Parser *p,
     ColumnGraph *column
 ) {
@@ -160,7 +160,7 @@ static bool parse_column_series(
         if (end == p->source + p->position ||
             errno == ERANGE ||
             !isfinite(value)) {
-            fprintf(stderr, "invalid column value in series '%s'\n",
+            fprintf(stderr, "invalid value in series '%s'\n",
                     series->name);
             return false;
         }
@@ -184,7 +184,7 @@ static bool parse_column_series(
     skip_whitespace(p);
 
     if (p->source[p->position] == ':') {
-        if (!parse_column_color(p, series)) {
+        if (!parse_series_color(p, series)) {
             fprintf(stderr, "invalid color in series '%s'\n",
                     series->name);
             return false;
@@ -267,9 +267,12 @@ static bool generate_categories(ColumnGraph *column) {
     return true;
 }
 
-bool column_graph_parse(Parser *p, Graph *graph) {
-    ColumnGraph *column = &graph->data.column;
-
+static bool series_graph_parse(
+    Parser *p,
+    ColumnGraph *column,
+    const char *series_block,
+    const char *chart_name
+) {
     *column = (ColumnGraph){0};
 
     skip_whitespace(p);
@@ -282,9 +285,9 @@ bool column_graph_parse(Parser *p, Graph *graph) {
             return false;
     }
 
-    if (!expect_word(p, "columns") ||
+    if (!expect_word(p, series_block) ||
         !expect(p, '{')) {
-        fprintf(stderr, "expected 'columns { ... }'\n");
+        fprintf(stderr, "expected '%s { ... }'\n", series_block);
         return false;
     }
 
@@ -294,8 +297,8 @@ bool column_graph_parse(Parser *p, Graph *graph) {
         if (expect(p, '}'))
             break;
 
-        if (!parse_column_series(p, column)) {
-            fprintf(stderr, "invalid column series\n");
+        if (!parse_series(p, column)) {
+            fprintf(stderr, "invalid %s series\n", chart_name);
             return false;
         }
 
@@ -305,13 +308,21 @@ bool column_graph_parse(Parser *p, Graph *graph) {
             break;
 
         if (!expect(p, ',')) {
-            fprintf(stderr, "expected ',' or '}' after column series\n");
+            fprintf(
+                stderr,
+                "expected ',' or '}' after %s series\n",
+                chart_name
+            );
             return false;
         }
     }
 
     if (column->series_count == 0) {
-        fprintf(stderr, "column chart must contain at least one series\n");
+        fprintf(
+            stderr,
+            "%s chart must contain at least one series\n",
+            chart_name
+        );
         return false;
     }
 
@@ -319,6 +330,24 @@ bool column_graph_parse(Parser *p, Graph *graph) {
         return false;
 
     return true;
+}
+
+bool column_graph_parse(Parser *p, Graph *graph) {
+    return series_graph_parse(
+        p,
+        &graph->data.column,
+        "columns",
+        "column"
+    );
+}
+
+bool line_graph_parse(Parser *p, Graph *graph) {
+    return series_graph_parse(
+        p,
+        &graph->data.line,
+        "lines",
+        "line"
+    );
 }
 
 /* -------------------------------------------------- */

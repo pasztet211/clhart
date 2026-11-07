@@ -8,6 +8,7 @@ typedef enum {
     CHART_HISTOGRAM,
     CHART_BAR,
     CHART_COLUMN,
+    CHART_LINE,
     CHART_PIE,
     CHART_COMBINATION
 } ChartType;
@@ -90,6 +91,7 @@ struct ChartConfig {
         BarConfig bar;
         CombinationConfig combination;
         ColumnConfig column;
+        ColumnConfig line;
     } specific;
 };
 
@@ -213,6 +215,7 @@ struct Graph {
         BarGraph bar;
         CombinationGraph combination;
         ColumnGraph column;
+        ColumnGraph line;
     } data;
 };
 
