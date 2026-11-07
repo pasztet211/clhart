@@ -9,11 +9,17 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define WINDOW_WIDTH RENDERER_BASE_WIDTH
 #define WINDOW_HEIGHT RENDERER_BASE_HEIGHT
+
+static int scale_legend_dimension(int dimension, double scale) {
+    int scaled = (int)lround(dimension * scale);
+    return scaled > 0 ? scaled : 1;
+}
 
 static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
@@ -61,7 +67,8 @@ void draw_legend(
     TTF_Font *font,
     const Graph *graph,
     const ChartConfig *config,
-    int width
+    int width,
+    double scale
 ) {
     if (!config->global.legend)
         return;
@@ -120,19 +127,20 @@ void draw_legend(
             max_text_width = text_width;
     }
 
-    const int padding = 10;
-    const int swatch_width = 16;
-    const int gap = 8;
-    const int row_height = 30;
+    const int padding = scale_legend_dimension(10, scale);
+    const int swatch_width = scale_legend_dimension(16, scale);
+    const int gap = scale_legend_dimension(8, scale);
+    const int row_height = scale_legend_dimension(30, scale);
+    const int swatch_height = scale_legend_dimension(16, scale);
+    const int right_margin = scale_legend_dimension(20, scale);
+    const int top_margin = scale_legend_dimension(20, scale);
+    const int text_offset = scale_legend_dimension(5, scale);
 
     int legend_width =
         padding * 2 + swatch_width + gap + max_text_width;
 
-    int legend_height =
-        padding * 2 + count * row_height;
-
-    int legend_x = width - legend_width - 20;
-    int legend_y = 20;
+    int legend_x = width - legend_width - right_margin;
+    int legend_y = top_margin;
 
     for (int i = 0; i < count; i++) {
         const char *name;
@@ -236,7 +244,7 @@ void draw_legend(
             legend_x + padding,
             y,
             swatch_width,
-            16
+            swatch_height
         };
 
         SDL_RenderFillRect(renderer, &swatch);
@@ -259,7 +267,7 @@ void draw_legend(
             if (texture) {
                 SDL_Rect text_rect = {
                     legend_x + padding + swatch_width + gap,
-                    y - 5,
+                    y - text_offset,
                     surface->w,
                     surface->h
                 };
@@ -456,7 +464,7 @@ bool render_graph(
                 break;
         }
         if (config->type != CHART_COMBINATION) {
-            draw_legend(renderer, font, graph, config, WINDOW_WIDTH);
+            draw_legend(renderer, font, graph, config, WINDOW_WIDTH, 1.0);
         }
         draw_title(renderer, font, config->title, WINDOW_WIDTH);
 

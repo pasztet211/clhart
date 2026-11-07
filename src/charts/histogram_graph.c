@@ -525,11 +525,13 @@ void histogram_graph_draw(
     if (parameter_count == 0)
         return;
 
-    // Plot margins
-    float left = 90;
-    float top = 80;
-    float right = width - 70;
-    float bottom = height - 90;
+    double scale = fmin(width / 1000.0, height / 800.0);
+
+    // Scale plot margins with the chart cell so combination charts keep a useful plot area.
+    float left = 90 * scale * 1.15;
+    float top = 80 * scale * 1.15;
+    float right = width - 70 * scale * 1.15;
+    float bottom = height - 90 * scale * 1.15;
 
     float plot_width = right - left;
     float plot_height = bottom - top;

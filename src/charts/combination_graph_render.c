@@ -92,20 +92,35 @@ static bool draw_child_chart(
         return false;
     }
 
-    if (TTF_SetFontSize(font, RENDERER_BASE_FONT_SIZE) != 0) {
-        fprintf(
-            stderr,
-            "could not set fixed title and legend font: %s\n",
-            TTF_GetError()
-        );
-        if (TTF_SetFontSize(font, parent_font_size) != 0) {
-            fprintf(stderr, "could not restore parent chart font: %s\n", TTF_GetError());
-        }
-        return false;
-    }
-
     if (chart->config->global.legend) {
-        draw_legend(renderer, font, chart->graph, chart->config, width);
+        int legend_font_size = (int)lround(font_size * 1.2);
+        if (legend_font_size <= font_size)
+            legend_font_size = font_size + 1;
+
+        if (TTF_SetFontSize(font, legend_font_size) != 0) {
+            fprintf(stderr, "could not resize child chart legend font: %s\n", TTF_GetError());
+            if (TTF_SetFontSize(font, parent_font_size) != 0) {
+                fprintf(stderr, "could not restore parent chart font: %s\n", TTF_GetError());
+            }
+            return false;
+        }
+
+        draw_legend(
+            renderer,
+            font,
+            chart->graph,
+            chart->config,
+            width,
+            legend_font_size / (double)RENDERER_BASE_FONT_SIZE
+        );
+
+        if (TTF_SetFontSize(font, font_size) != 0) {
+            fprintf(stderr, "could not restore child chart font: %s\n", TTF_GetError());
+            if (TTF_SetFontSize(font, parent_font_size) != 0) {
+                fprintf(stderr, "could not restore parent chart font: %s\n", TTF_GetError());
+            }
+            return false;
+        }
     }
 
     if (parent_config->specific.combination.show_sub_titles) {
@@ -141,10 +156,14 @@ bool combination_graph_draw(
     int columns = (int)ceil(sqrt(count));
     int rows = (count + columns - 1) / columns;
 
-    const int gap = 12;
+    const int gap = 8;
+    int title_space = config->title && config->title[0] != '\0'
+        ? child_font_size(width, height) * 2
+        : 0;
 
     int cell_width = (width - gap * (columns + 1)) / columns;
-    int cell_height = (height - gap * (rows + 1)) / rows;
+    int cell_height =
+        (height - title_space - gap * (rows + 1)) / rows;
 
     if (cell_width <= 0 || cell_height <= 0) {
         fprintf(stderr, "combination chart cells are too small\n");
@@ -160,7 +179,7 @@ bool combination_graph_draw(
 
         SDL_Rect viewport = {
             parent_viewport.x + gap + column * (cell_width + gap),
-            parent_viewport.y + gap + row * (cell_height + gap),
+            parent_viewport.y + title_space + gap + row * (cell_height + gap),
             cell_width,
             cell_height
         };

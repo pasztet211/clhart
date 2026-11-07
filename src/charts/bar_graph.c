@@ -224,11 +224,14 @@ void bar_graph_draw(
     if (value_max <= value_min)
         value_max = value_min + 1.0;
 
-    // Plot margins
-    float left = settings->horizontal ? 180.0f : 100.0f;
-    float top = 80.0f;
-    float right = width - 70.0f;
-    float bottom = height - (settings->horizontal ? 100.0f : 140.0f);
+    double scale = fmin(width / 1000.0, height / 800.0);
+
+    // Scale plot margins with the chart cell so combination charts keep a useful plot area.
+    float left = (settings->horizontal ? 180.0f : 100.0f) * scale * 1.15f;
+    float top = 80.0f * scale * 1.15f;
+    float right = width - 70.0f * scale * 1.15f;
+    float bottom = height -
+        (settings->horizontal ? 100.0f : 140.0f) * scale * 1.15f;
 
     float plot_width = right - left;
     float plot_height = bottom - top;

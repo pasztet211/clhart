@@ -495,10 +495,11 @@ void column_graph_draw(
         value_max += 1.0;
     }
 
-    const int left = 85;
-    const int top = 70;
-    const int right = width - 30;
-    const int bottom = height - 90;
+    double scale = fmin(width / 1000.0, height / 800.0);
+    const int left = (int)lround(85 * scale * 1.15);
+    const int top = (int)lround(70 * scale * 1.15);
+    const int right = width - (int)lround(30 * scale * 1.15);
+    const int bottom = height - (int)lround(90 * scale * 1.15);
 
     int plot_width = right - left;
     int plot_height = bottom - top;

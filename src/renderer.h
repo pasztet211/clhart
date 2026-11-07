@@ -20,7 +20,8 @@ void draw_legend(SDL_Renderer *renderer,
     TTF_Font *font,
     const Graph *graph,
     const ChartConfig *config,
-    int width
+    int width,
+    double scale
 );
 void draw_title(
     SDL_Renderer *renderer,

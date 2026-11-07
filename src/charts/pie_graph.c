@@ -365,10 +365,11 @@ void pie_graph_draw(
     float cx = width / 2.0f;
     float cy = height / 2.0f;
 
-    float radius = fminf(width, height) * 0.35f;
+    float radius = fminf(width, height) *
+        (settings->three_dimensional ? 0.44f : 0.42f);
 
     float squash = settings->three_dimensional ? 0.4f : 1.0f;
-    float depth = settings->three_dimensional ? 35.0f : 0.0f;
+    float depth = settings->three_dimensional ? radius * 0.125f : 0.0f;
 
     double angle = -PI / 2.0;
 
