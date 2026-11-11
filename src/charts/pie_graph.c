@@ -340,6 +340,11 @@ static void draw_slice_sides(
     }
 }
 
+static float deterministic_scale(int index) {
+    int tier = index % 3; // Cycles 0, 1, 2, 0, 1, 2...
+    return 0.50f + 0.12f * (float)tier;
+}
+
 void pie_graph_draw(
     SDL_Renderer *renderer,
     TTF_Font *font,
@@ -409,31 +414,33 @@ void pie_graph_draw(
         angle += advance;
     }
 
-    for (int i = 0; i < pie->slice_count; i++) {
-        const PieSlice *slice = &pie->slices[i];
+    if (settings->show_percentages) {
+        for (int i = 0; i < pie->slice_count; i++) {
+            const PieSlice *slice = &pie->slices[i];
 
-        double percentage = slice->value / total * 100.0;
-        double advance = percentage / 100.0 * 2.0 * PI;
-        if (settings->show_percentages && slice->value > 0.0) {
-            double middle_angle = angle + advance / 2.0;
+            double percentage = slice->value / total * 100.0;
+            double advance = percentage / 100.0 * 2.0 * PI;
+            if (slice->value > 0.0) {
+                double middle_angle = angle + advance / 2.0;
 
-            float label_radius = radius * 0.62f;
+                float label_radius = radius * deterministic_scale(i);
 
-            float label_x = cx +
-                (float)(cos(middle_angle) * label_radius);
+                float label_x = cx +
+                    (float)(cos(middle_angle) * label_radius);
 
-            float label_y = cy +
-                (float)(sin(middle_angle) * label_radius * squash);
+                float label_y = cy +
+                    (float)(sin(middle_angle) * label_radius * squash);
 
-            draw_percentage(
-                renderer,
-                font,
-                percentage,
-                label_x,
-                label_y
-            );
+                draw_percentage(
+                    renderer,
+                    font,
+                    percentage,
+                    label_x,
+                    label_y
+                );
+            }
+
+            angle += advance;
         }
-
-        angle += advance;
     }
 }

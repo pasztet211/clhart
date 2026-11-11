@@ -203,7 +203,7 @@ void line_graph_draw(
     SDL_Rect clip = {left, top, right - left, bottom - top};
     SDL_RenderSetClipRect(renderer, &clip);
 
-    int point_radius = (int)lround(4 * scale);
+    int point_radius = (int)lround(6 * scale);
     if (point_radius < 2)
         point_radius = 2;
 
