@@ -469,6 +469,26 @@ static void set_column_color(
     }
 }
 
+static double get_nice_max(double value_min, double value_max) {
+    double range = value_max - value_min;
+    if (range <= 1e-12) return value_min + 5.0; // Guard against flat line
+
+    // Find what 1/5th of the range looks like, then snap it to a clean step
+    double rough_step = range / 5.0;
+    double mag = pow(10.0, floor(log10(rough_step)));
+    double norm = rough_step / mag;
+    double nice_step;
+
+    if (norm <= 1.0)      nice_step = 1.0 * mag;
+    else if (norm <= 2.0) nice_step = 2.0 * mag;
+    else if (norm <= 2.5) nice_step = 2.5 * mag;
+    else if (norm <= 5.0) nice_step = 5.0 * mag;
+    else                  nice_step = 10.0 * mag;
+
+    // Return the exact max needed so (max - min) / 5.0 == nice_step
+    return value_min + (nice_step * 5.0);
+}
+
 void column_graph_draw(
     SDL_Renderer *renderer,
     TTF_Font *font,
@@ -572,8 +592,8 @@ void column_graph_draw(
     // Value-axis numbers and grid lines
     if (settings->show_axis_numbers) {
         for (int i = 0; i <= 5; i++) {
-            double value = value_min +
-                (value_max - value_min) * i / 5.0;
+            value_max = get_nice_max(value_min, value_max);
+            double value = value_min + (value_max - value_min) * i / 5.0;
 
             int y = column_map(
                 value,
