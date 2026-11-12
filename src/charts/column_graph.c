@@ -10,9 +10,10 @@
 
 static bool parse_column_category(
     Parser *p,
-    ColumnGraph *column
+    ColumnGraph *column,
+    ChartConfig *config
 ) {
-    char *category = parse_name(p);
+    char *category = parse_name(p, config);
 
     if (!category)
         return false;
@@ -35,7 +36,8 @@ static bool parse_column_category(
 
 static bool parse_categories(
     Parser *p,
-    ColumnGraph *column
+    ColumnGraph *column,
+    ChartConfig *config
 ) {
     if (!expect_word(p, "categories") ||
         !expect(p, '{')) {
@@ -49,7 +51,7 @@ static bool parse_categories(
         if (expect(p, '}'))
             break;
 
-        if (!parse_column_category(p, column)) {
+        if (!parse_column_category(p, column, config)) {
             fprintf(stderr, "invalid category\n");
             return false;
         }
@@ -121,7 +123,8 @@ static bool parse_series_color(
 
 static bool parse_series(
     Parser *p,
-    ColumnGraph *column
+    ColumnGraph *column,
+    ChartConfig *config
 ) {
     ColumnSeries *new_series = realloc(
         column->series,
@@ -138,7 +141,7 @@ static bool parse_series(
 
     *series = (ColumnSeries){0};
 
-    series->name = parse_name(p);
+    series->name = parse_name(p, config);
 
     if (!series->name)
         return false;
@@ -271,7 +274,8 @@ static bool series_graph_parse(
     Parser *p,
     ColumnGraph *column,
     const char *series_block,
-    const char *chart_name
+    const char *chart_name,
+    ChartConfig *config
 ) {
     *column = (ColumnGraph){0};
 
@@ -281,7 +285,7 @@ static bool series_graph_parse(
     if (expect_word(p, "categories")) {
         p->position -= strlen("categories");
 
-        if (!parse_categories(p, column))
+        if (!parse_categories(p, column, config))
             return false;
     }
 
@@ -297,7 +301,7 @@ static bool series_graph_parse(
         if (expect(p, '}'))
             break;
 
-        if (!parse_series(p, column)) {
+        if (!parse_series(p, column, config)) {
             fprintf(stderr, "invalid %s series\n", chart_name);
             return false;
         }
@@ -332,21 +336,23 @@ static bool series_graph_parse(
     return true;
 }
 
-bool column_graph_parse(Parser *p, Graph *graph) {
+bool column_graph_parse(Parser *p, Graph *graph, ChartConfig *config) {
     return series_graph_parse(
         p,
         &graph->data.column,
         "columns",
-        "column"
+        "column",
+        config
     );
 }
 
-bool line_graph_parse(Parser *p, Graph *graph) {
+bool line_graph_parse(Parser *p, Graph *graph, ChartConfig *config) {
     return series_graph_parse(
         p,
         &graph->data.line,
         "lines",
-        "line"
+        "line",
+        config
     );
 }
 

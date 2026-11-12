@@ -10,11 +10,12 @@
 
 static bool parse_slice(
     Parser *p,
-    PieGraph *pie
+    PieGraph *pie,
+    ChartConfig *config
 ) {
     PieSlice slice = {0};
 
-    slice.name = parse_name(p);
+    slice.name = parse_name(p, config);
 
     if (!slice.name)
         return false;
@@ -76,7 +77,11 @@ failure:
     return false;
 }
 
-bool pie_graph_parse(Parser *p, Graph *graph) {
+bool pie_graph_parse(
+    Parser *p,
+    Graph *graph,
+    ChartConfig *config
+) {
     PieGraph *pie = &graph->data.pie;
 
     *pie = (PieGraph){0};
@@ -93,7 +98,7 @@ bool pie_graph_parse(Parser *p, Graph *graph) {
         if (expect(p, '}'))
             break;
 
-        if (!parse_slice(p, pie)) {
+        if (!parse_slice(p, pie, config)) {
             fprintf(stderr, "invalid pie slice\n");
             return false;
         }

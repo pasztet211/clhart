@@ -14,15 +14,15 @@ void skip_whitespace(Parser *parser);
 bool expect_word(Parser *parser, const char *word);
 bool expect(Parser *parser, char c);
 bool expect_operator(Parser *parser, const char *op);
-char *parse_name(Parser *parser);
-bool node_graph_parse(Parser *parser, Graph *graph);
+char *parse_name(Parser *parser, ChartConfig *config);
+bool node_graph_parse(Parser *parser, Graph *graph, ChartConfig *config);
 bool histogram_graph_parse(
     Parser *parser,
     Graph *graph,
     ChartConfig *config
 );
-bool pie_graph_parse(Parser *parser, Graph *graph);
-bool bar_graph_parse(Parser *p, Graph *graph);
+bool pie_graph_parse(Parser *parser, Graph *graph, ChartConfig *config);
+bool bar_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
 bool combination_graph_parse(
     Parser *p,
     Graph *graph,
@@ -33,7 +33,7 @@ bool parse_graph(
     Graph *graph,
     ChartConfig *config
 );
-bool column_graph_parse(Parser *p, Graph *graph);
-bool line_graph_parse(Parser *p, Graph *graph);
+bool column_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
+bool line_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
 
 #endif

@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2_ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v1.2.1-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.2.6-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -49,7 +49,7 @@ to write a range you should write the minimumn desired value then a semicolon (`
 
 ### writing comments:
 
-you can make a comment in 3 ways:
+you can make a comment in 2 ways:
 
 1. starting a line with `<>`
 2. starting a line with `//`
@@ -64,6 +64,7 @@ you can make a comment in 3 ways:
 #### Setup parameters
 - `show_labels` displays identifiers instead of names
 - `legend` displays a color-coded legend
+- `no_underscore_names` makes all display names render spaces instead of underscores (`_`)
 
 ### graph types:
 

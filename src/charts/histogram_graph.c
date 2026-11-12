@@ -24,11 +24,12 @@ static bool parse_parameter_value(Parser *p, double *value) {
 
 static bool parse_fuzzy_parameter(
     Parser *p,
-    HistogramGraph *histogram
+    HistogramGraph *histogram,
+    ChartConfig *config
 ) {
     FuzzyParameter parameter = {0};
 
-    parameter.name = parse_name(p);
+    parameter.name = parse_name(p, config);
 
     if (!parameter.name) {
         return false;
@@ -110,11 +111,12 @@ failure:
 
 static bool parse_distribution_parameter(
     Parser *p,
-    HistogramGraph *histogram
+    HistogramGraph *histogram,
+    ChartConfig *config
 ) {
     DistributionParameter parameter = {0};
 
-    parameter.name = parse_name(p);
+    parameter.name = parse_name(p, config);
 
     if (!parameter.name) {
         return false;
@@ -206,8 +208,8 @@ bool histogram_graph_parse(
         }
 
         bool success = distribution
-            ? parse_distribution_parameter(p, histogram)
-            : parse_fuzzy_parameter(p, histogram);
+            ? parse_distribution_parameter(p, histogram, config)
+            : parse_fuzzy_parameter(p, histogram, config);
 
         if (!success) {
             return false;

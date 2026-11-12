@@ -205,7 +205,11 @@ static bool parse_optional_color(
     return true;
 }
 
-bool node_graph_parse(Parser *parser, Graph *graph) {
+bool node_graph_parse(
+    Parser *parser,
+    Graph *graph,
+    ChartConfig *config
+) {
     PendingConnection *pending = NULL;
     int pending_count = 0;
     bool success = false;
@@ -228,7 +232,7 @@ bool node_graph_parse(Parser *parser, Graph *graph) {
             break;
         }
 
-        char *first = parse_name(parser);
+        char *first = parse_name(parser, config);
         if (!first) {
             fprintf(stderr, "expected node name\n");
             goto cleanup;
@@ -243,7 +247,7 @@ bool node_graph_parse(Parser *parser, Graph *graph) {
 
         if (expect_operator(parser, "---")) {
             declaration = true;
-            char *identifier = parse_name(parser);
+            char *identifier = parse_name(parser, config);
 
             if (!identifier) {
                 fprintf(stderr, "expected identifier after '---'\n");
@@ -281,7 +285,7 @@ bool node_graph_parse(Parser *parser, Graph *graph) {
             const char *operator_name = bidirectional
                 ? "<->"
                 : (reverse ? "<--" : "-->");
-            char *second = parse_name(parser);
+            char *second = parse_name(parser, config);
 
             if (!second) {
                 fprintf(

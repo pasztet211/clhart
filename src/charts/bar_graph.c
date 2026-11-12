@@ -11,11 +11,12 @@
 
 static bool parse_bar(
     Parser *p,
-    BarGraph *bar_graph
+    BarGraph *bar_graph,
+    ChartConfig *config
 ) {
     Bar bar = {0};
 
-    bar.name = parse_name(p);
+    bar.name = parse_name(p, config);
 
     if (!bar.name)
         return false;
@@ -77,7 +78,7 @@ failure:
     return false;
 }
 
-bool bar_graph_parse(Parser *p, Graph *graph) {
+bool bar_graph_parse(Parser *p, Graph *graph, ChartConfig *config) {
     BarGraph *bar_graph = &graph->data.bar;
 
     *bar_graph = (BarGraph){0};
@@ -94,7 +95,7 @@ bool bar_graph_parse(Parser *p, Graph *graph) {
         if (expect(p, '}'))
             break;
 
-        if (!parse_bar(p, bar_graph)) {
+        if (!parse_bar(p, bar_graph, config)) {
             fprintf(stderr, "invalid bar\n");
             return false;
         }

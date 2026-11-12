@@ -16,6 +16,7 @@ typedef enum {
 typedef struct {
     bool show_identifiers;
     bool legend;
+    bool no_underscore_names;
 } GlobalConfig;
 
 typedef struct {

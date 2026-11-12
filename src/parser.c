@@ -124,7 +124,11 @@ static char *parse_title(Parser *p) {
     return title;
 }
 
-static bool parse_setup(Parser *p, Settings *settings) {
+static bool parse_setup(
+    Parser *p,
+    Settings *settings,
+    ChartConfig *config
+) {
     if (!expect(p, '{')) {
         fprintf(stderr, "expected '{' after .setup\n");
         return false;
@@ -138,7 +142,7 @@ static bool parse_setup(Parser *p, Settings *settings) {
             return true;
         }
 
-        char *name = parse_name(p);
+        char *name = parse_name(p, config);
 
         if (!name) {
             fprintf(stderr, "expected setting name\n");
@@ -442,6 +446,17 @@ static bool apply_settings(
             column->has_y_range = true;
         }
 
+        else if (strcmp(name, "no_underscore_names") == 0) {
+            if (strcmp(value, "0") == 0) {
+                config->global.no_underscore_names = false;
+            } else if (strcmp(value, "1") == 0) {
+                config->global.no_underscore_names = true;
+            } else {
+                fprintf(stderr, "no_underscore_names must be 0 or 1\n");
+                return false;
+            }
+        }
+
         else {
             fprintf(stderr, "unknown or incompatible setting: %s\n", name);
             return false;
@@ -494,7 +509,7 @@ bool expect_operator(Parser *p, const char *op) {
     return true;
 }
 
-char *parse_name(Parser *p) {
+char *parse_name(Parser *p, ChartConfig *config) {
     skip_whitespace(p);
 
     size_t start = p->position;
@@ -542,6 +557,14 @@ char *parse_name(Parser *p) {
 
     memcpy(name, p->source + start, length);
     name[length] = '\0';
+
+    if (!quoted && config->global.no_underscore_names) {
+        for (size_t i = 0; i < length; i++) {
+            if (name[i] == '_') {
+                name[i] = ' ';
+            }
+        }
+    }
 
     return name;
 }
@@ -621,7 +644,7 @@ bool parse_graph(
 
             setup_seen = true;
 
-            if (!parse_setup(p, &settings)) {
+            if (!parse_setup(p, &settings, config)) {
                 goto cleanup;
             }
         } else if (expect_word(p, "title")) {
@@ -679,7 +702,7 @@ bool parse_graph(
 
     switch (config->type) {
         case CHART_NODES:
-            if (!node_graph_parse(p, graph)) {
+            if (!node_graph_parse(p, graph, config)) {
                 goto cleanup;
             }
             break;
@@ -691,13 +714,13 @@ bool parse_graph(
             break;
         
         case CHART_PIE:
-            if (!pie_graph_parse(p, graph)) {
+            if (!pie_graph_parse(p, graph, config)) {
                 goto cleanup;
             }
             break;
 
         case CHART_BAR:
-            if (!bar_graph_parse(p, graph)) {
+            if (!bar_graph_parse(p, graph, config)) {
                 goto cleanup;
             }
             break;
@@ -709,13 +732,13 @@ bool parse_graph(
             break;
         
         case CHART_COLUMN:
-            if (!column_graph_parse(p, graph)) {
+            if (!column_graph_parse(p, graph, config)) {
                 goto cleanup;
             }
             break;
 
         case CHART_LINE:
-            if (!line_graph_parse(p, graph)) {
+            if (!line_graph_parse(p, graph, config)) {
                 goto cleanup;
             }
             break;
