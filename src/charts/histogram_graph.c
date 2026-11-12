@@ -422,13 +422,32 @@ static void draw_membership(
 }
 
 static double calculate_grid_step(double min, double max) {
-    double step = 10.0;
-
-    while (step > (max - min) / 2.0) {
-        step /= 2.0;
+    double range = max - min;
+    if (range <= 0.0) {
+        return 1.0;
     }
 
-    return step;
+    // Target roughly 6 intervals across the axis
+    double rough_step = range / 6.0;
+
+    // Find the order of magnitude (e.g., 100, 10, 1, 0.1)
+    double magnitude = pow(10.0, floor(log10(rough_step)));
+    double normalized = rough_step / magnitude;
+
+    double nice_multiplier;
+    if (normalized <= 1.0) {
+        nice_multiplier = 1.0;
+    } else if (normalized <= 2.0) {
+        nice_multiplier = 2.0;
+    } else if (normalized <= 2.5) {
+        nice_multiplier = 2.5;
+    } else if (normalized <= 5.0) {
+        nice_multiplier = 5.0;
+    } else {
+        nice_multiplier = 10.0;
+    }
+
+    return nice_multiplier * magnitude;
 }
 
 static void draw_grid_level(

@@ -2,16 +2,14 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2_ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v1.2.0-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.2.1-orange?style=flat-square)
 
 # Clhart
 graphing software/language
 
 ## Installation and file extension:
 
-**Option 1: Clone the repo**
-
-1. Clone the repo to `C:\Clhart`
+1. download the `.exe` from the repo
    * If the required SDL2 DLLs (egg. `SDL2_ttf.dll`) are not in **your system PATH**, download them from somewhere
 
 2. Add `C:\Clhart` to **PATH**[^first]
