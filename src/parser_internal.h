@@ -2,12 +2,14 @@
 #define PARSER_INTERNAL_H
 
 #include "parser.h"
+#include "images.h"
 
 #include <stddef.h>
 
 typedef struct {
     const char *source;
     size_t position;
+    SDL_Renderer *renderer;
 } Parser;
 
 void skip_whitespace(Parser *parser);
@@ -31,7 +33,8 @@ bool combination_graph_parse(
 bool parse_graph(
     Parser *p,
     Graph *graph,
-    ChartConfig *config
+    ChartConfig *config,
+    SDL_Renderer *renderer
 );
 bool column_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
 bool line_graph_parse(Parser *p, Graph *graph, ChartConfig *config);

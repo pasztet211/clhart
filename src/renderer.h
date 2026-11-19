@@ -11,10 +11,13 @@
 #define RENDERER_BASE_HEIGHT 800
 #define RENDERER_BASE_FONT_SIZE 20
 
+bool renderer_create(SDL_Window **window, SDL_Renderer **renderer);
+void renderer_destroy(SDL_Window *window, SDL_Renderer *renderer);
 bool render_graph(
     const Graph *graph,
     const char *font_path,
-    const ChartConfig *config
+    const ChartConfig *config,
+    SDL_Renderer *renderer
 );
 void draw_legend(SDL_Renderer *renderer,
     TTF_Font *font,

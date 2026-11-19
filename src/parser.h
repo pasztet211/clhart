@@ -2,6 +2,9 @@
 #define PARSER_H
 
 #include <stdbool.h>
+#include <SDL2/SDL.h>
+
+typedef struct ImageRegistry ImageRegistry;
 
 typedef enum {
     CHART_NODES,
@@ -218,12 +221,15 @@ struct Graph {
         ColumnGraph column;
         ColumnGraph line;
     } data;
+
+    ImageRegistry *images;
 };
 
 bool parse_file(
     const char *filename,
     Graph **graph,
-    ChartConfig **config
+    ChartConfig **config,
+    SDL_Renderer *renderer
 );
 
 void free_graph(Graph *graph, ChartType type);

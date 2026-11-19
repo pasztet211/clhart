@@ -12,21 +12,30 @@ int main(int argc, char *argv[]) {
 
     Graph *graph = NULL;
     ChartConfig *config = NULL;
+    SDL_Window *window = NULL;
+    SDL_Renderer *renderer = NULL;
 
-    if (!parse_file(argv[1], &graph, &config)) {
+    if (!renderer_create(&window, &renderer)) {
+        return 1;
+    }
+
+    if (!parse_file(argv[1], &graph, &config, renderer)) {
         fprintf(stderr, "failed to parse graph\n");
+        renderer_destroy(window, renderer);
         return 1;
     }
 
-    if (!render_graph(graph, "C:/Windows/Fonts/arial.ttf", config)) {
-        free_graph(graph, config->type);
-        free_chart_config(config);
-        return 1;
-    }
+    bool rendered = render_graph(
+        graph,
+        "C:/Windows/Fonts/arial.ttf",
+        config,
+        renderer
+    );
 
     free_graph(graph, config->type);
     free_chart_config(config);
-    return 0;
+    renderer_destroy(window, renderer);
+    return rendered ? 0 : 1;
 }
 //     printf("successfully parsed graph!\n\n");
 

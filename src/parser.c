@@ -1,4 +1,5 @@
 #include "parser_internal.h"
+#include "images.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -196,6 +197,103 @@ static bool parse_setup(
             p->position++;
         } else if (p->source[p->position] != '}') {
             fprintf(stderr, "expected ',' or '}' in setup\n");
+            return false;
+        }
+    }
+}
+
+static char *parse_image_path(Parser *p) {
+    skip_whitespace(p);
+
+    if (strncmp(p->source + p->position, "(*\"", 3) != 0) {
+        return NULL;
+    }
+
+    p->position += 3;
+
+    size_t start = p->position;
+
+    while (p->source[p->position] &&
+           strncmp(p->source + p->position, "\"*)", 3) != 0) {
+        p->position++;
+    }
+
+    if (!p->source[p->position]) {
+        return NULL;
+    }
+
+    size_t length = p->position - start;
+
+    char *path = malloc(length + 1);
+
+    if (!path) {
+        return NULL;
+    }
+
+    memcpy(path, p->source + start, length);
+    path[length] = '\0';
+
+    p->position += 3;
+
+    return path;
+}
+
+static bool parse_images(
+    Parser *p,
+    ChartConfig *config,
+    ImageRegistry *images,
+    SDL_Renderer *renderer
+) {
+    if (!expect(p, '{')) {
+        fprintf(stderr, "expected '{' after images\n");
+        return false;
+    }
+
+    while (true) {
+        skip_whitespace(p);
+
+        if (p->source[p->position] == '}') {
+            p->position++;
+            return true;
+        }
+
+        char *name = parse_name(p, config);
+
+        if (!name) {
+            fprintf(stderr, "expected image name\n");
+            return false;
+        }
+
+        if (!expect_operator(p, "---")) {
+            fprintf(stderr, "expected '---' after image name\n");
+            free(name);
+            return false;
+        }
+
+        char *path = parse_image_path(p);
+
+        if (!path) {
+            fprintf(stderr, "expected image path\n");
+            free(name);
+            return false;
+        }
+
+        if (!add_image(images, renderer, name, path)) {
+            fprintf(stderr, "could not load image '%s' from '%s'\n", name, path);
+            free(path);
+            free(name);
+            return false;
+        }
+
+        free(path);
+        free(name);
+
+        skip_whitespace(p);
+
+        if (p->source[p->position] == ',') {
+            p->position++;
+        } else if (p->source[p->position] != '}') {
+            fprintf(stderr, "expected ',' or '}' in images\n");
             return false;
         }
     }
@@ -572,17 +670,21 @@ char *parse_name(Parser *p, ChartConfig *config) {
 bool parse_graph(
     Parser *p,
     Graph *graph,
-    ChartConfig *config
+    ChartConfig *config,
+    SDL_Renderer *renderer
 ) {
     Settings settings = {0};
+    ImageRegistry *images = NULL;
 
     bool success = false;
     bool type_seen = false;
     bool setup_seen = false;
     bool title_seen = false;
     bool switch_seen = false;
+    bool images_seen = false;
 
     *config = (ChartConfig){0};
+    p->renderer = renderer;
 
     config->type = CHART_NODES;
     config->global.show_identifiers = false;
@@ -676,6 +778,25 @@ bool parse_graph(
                     goto cleanup;
                 }
             }
+        } else if (expect_word(p, "images")) {
+            if (images_seen) {
+                fprintf(stderr, "duplicate images declaration\n");
+                goto cleanup;
+            }
+
+            images_seen = true;
+
+            images = malloc(sizeof(ImageRegistry));
+
+            if (!images) {
+                goto cleanup;
+            }
+
+            init_image_registry(images);
+
+            if (!parse_images(p, config, images, renderer)) {
+                goto cleanup;
+            }
         } else {
             fprintf(stderr, "unknown directive\n");
             goto cleanup;
@@ -749,6 +870,8 @@ bool parse_graph(
     }
 
     success = true;
+    graph->images = images;
+    images = NULL;
 
 cleanup:
     for (int i = 0; i < settings.count; i++) {
@@ -757,6 +880,10 @@ cleanup:
     }
 
     free(settings.items);
+    if (images) {
+        free_image_registry(images);
+        free(images);
+    }
 
     if (!success) {
         free(config->title);
@@ -769,9 +896,10 @@ cleanup:
 bool parse_file(
     const char *filename,
     Graph **graph,
-    ChartConfig **config
+    ChartConfig **config,
+    SDL_Renderer *renderer
 ) {
-    if (!graph || !config) {
+    if (!graph || !config || !renderer) {
         return false;
     }
 
@@ -831,10 +959,11 @@ bool parse_file(
 
     Parser parser = {
         .source = source,
-        .position = 0
+        .position = 0,
+        .renderer = renderer
     };
 
-    bool success = parse_graph(&parser, *graph, *config);
+    bool success = parse_graph(&parser, *graph, *config, renderer);
 
     if (success) {
         skip_whitespace(&parser);
@@ -939,6 +1068,11 @@ void free_graph(Graph *graph, ChartType type) {
                 free(series_graph->categories);
             }
             break;
+    }
+
+    if (graph->images) {
+        free_image_registry(graph->images);
+        free(graph->images);
     }
 
     free(graph);

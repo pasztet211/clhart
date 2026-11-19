@@ -11,7 +11,7 @@ typedef struct {
     SDL_Texture *texture;
 } Image;
 
-typedef struct {
+typedef struct ImageRegistry {
     Image images[MAX_IMAGES];
     int count;
 } ImageRegistry;

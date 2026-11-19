@@ -26,6 +26,63 @@ static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
 }
 
+bool renderer_create(SDL_Window **window, SDL_Renderer **renderer) {
+    if (!window || !renderer) {
+        return false;
+    }
+
+    *window = NULL;
+    *renderer = NULL;
+
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
+        return false;
+    }
+
+    *window = SDL_CreateWindow(
+        "Clhart",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        SDL_WINDOW_SHOWN
+    );
+
+    if (!*window) {
+        fprintf(stderr, "window creation failed: %s\n", SDL_GetError());
+        renderer_destroy(*window, *renderer);
+        *window = NULL;
+        return false;
+    }
+
+    *renderer = SDL_CreateRenderer(
+        *window,
+        -1,
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+    );
+
+    if (!*renderer) {
+        fprintf(stderr, "renderer creation failed: %s\n", SDL_GetError());
+        renderer_destroy(*window, *renderer);
+        *window = NULL;
+        return false;
+    }
+
+    return true;
+}
+
+void renderer_destroy(SDL_Window *window, SDL_Renderer *renderer) {
+    if (renderer) {
+        SDL_DestroyRenderer(renderer);
+    }
+
+    if (window) {
+        SDL_DestroyWindow(window);
+    }
+
+    SDL_Quit();
+}
+
 void draw_title(
     SDL_Renderer *renderer,
     TTF_Font *font,
@@ -298,8 +355,14 @@ void draw_legend(
 bool render_graph(
     const Graph *graph,
     const char *font_path,
-    const ChartConfig *config
+    const ChartConfig *config,
+    SDL_Renderer *renderer
 ) {
+    if (!graph || !config || !renderer) {
+        fprintf(stderr, "cannot render without a graph, configuration, and renderer\n");
+        return false;
+    }
+
     switch (config->type) {
         case CHART_NODES:
             if (graph->data.nodes.node_count <= 0) {
@@ -351,14 +414,8 @@ bool render_graph(
             break;
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
-        return false;
-    }
-
     if (TTF_Init() != 0) {
         fprintf(stderr, "SDL_ttf initialization failed: %s\n", TTF_GetError());
-        SDL_Quit();
         return false;
     }
 
@@ -367,39 +424,6 @@ bool render_graph(
     if (!font) {
         fprintf(stderr, "could not load font: %s\n", TTF_GetError());
         TTF_Quit();
-        SDL_Quit();
-        return false;
-    }
-
-    SDL_Window *window = SDL_CreateWindow(
-        "Clhart",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT,
-        SDL_WINDOW_SHOWN
-    );
-
-    if (!window) {
-        fprintf(stderr, "window creation failed: %s\n", SDL_GetError());
-        TTF_CloseFont(font);
-        TTF_Quit();
-        SDL_Quit();
-        return false;
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(
-        window,
-        -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
-
-    if (!renderer) {
-        fprintf(stderr, "renderer creation failed: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
-        TTF_CloseFont(font);
-        TTF_Quit();
-        SDL_Quit();
         return false;
     }
 
@@ -504,12 +528,8 @@ bool render_graph(
         SDL_RenderPresent(renderer);
     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-
     TTF_CloseFont(font);
     TTF_Quit();
-    SDL_Quit();
 
     return true;
 }

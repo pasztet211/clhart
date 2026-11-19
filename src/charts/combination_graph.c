@@ -54,7 +54,7 @@ bool combination_graph_parse(
         }
 
         // Parse the child using the normal chart parser.
-        if (!parse_graph(p, child_graph, child_config)) {
+        if (!parse_graph(p, child_graph, child_config, p->renderer)) {
             free_graph(child_graph, child_config->type);
             free_chart_config(child_config);
             return false;
