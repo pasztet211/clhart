@@ -104,6 +104,8 @@ typedef struct {
     char *identifier;
     char color[7];
     bool has_color;
+
+    SDL_Texture *image;
 } Node;
 
 typedef struct {
@@ -133,6 +135,7 @@ typedef struct {
     double amount;
     char color[7];
     bool has_color;
+    SDL_Texture *image;
 } DistributionParameter;
 
 typedef struct {
@@ -155,6 +158,8 @@ typedef struct {
 
     char color[7];
     bool has_color;
+
+    SDL_Texture *image;
 } PieSlice;
 
 typedef struct {
@@ -168,6 +173,8 @@ typedef struct {
 
     char color[7];
     bool has_color;
+
+    SDL_Texture *image;
 } Bar;
 
 typedef struct {
@@ -183,6 +190,8 @@ typedef struct {
 
     char color[7];
     bool has_color;
+
+    SDL_Texture *image;
 } ColumnSeries;
 
 typedef struct {

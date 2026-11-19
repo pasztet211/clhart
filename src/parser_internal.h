@@ -9,6 +9,7 @@
 typedef struct {
     const char *source;
     size_t position;
+    ImageRegistry *images;
     SDL_Renderer *renderer;
 } Parser;
 
@@ -38,5 +39,6 @@ bool parse_graph(
 );
 bool column_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
 bool line_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
+SDL_Texture *parse_image_reference(Parser *p);
 
 #endif

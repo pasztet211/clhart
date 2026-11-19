@@ -27,7 +27,8 @@ static bool add_node(
     Graph *graph,
     char *name,
     char *identifier,
-    const char *color
+    const char *color,
+    SDL_Texture *image
 ) {
     for (int i = 0; i < graph->data.nodes.node_count; i++) {
         if (strcmp(graph->data.nodes.nodes[i].name, name) == 0) {
@@ -58,7 +59,8 @@ static bool add_node(
         .name = name,
         .identifier = identifier,
         .color = {0},
-        .has_color = color != NULL
+        .has_color = color != NULL,
+        .image = image
     };
 
     if (color) {
@@ -205,6 +207,43 @@ static bool parse_optional_color(
     return true;
 }
 
+static bool parse_node_attributes(
+    Parser *parser,
+    char color[7],
+    bool *has_color,
+    SDL_Texture **image
+) {
+    bool image_seen = false;
+    bool color_seen = false;
+
+    *has_color = false;
+    *image = NULL;
+
+    while (true) {
+        skip_whitespace(parser);
+
+        if (!image_seen &&
+            strncmp(parser->source + parser->position, "\"*)", 3) == 0) {
+            *image = parse_image_reference(parser);
+
+            if (!*image) {
+                return false;
+            }
+
+            image_seen = true;
+        } else if (!color_seen &&
+                   parser->source[parser->position] == ':') {
+            if (!parse_optional_color(parser, color, has_color)) {
+                return false;
+            }
+
+            color_seen = true;
+        } else {
+            return true;
+        }
+    }
+}
+
 bool node_graph_parse(
     Parser *parser,
     Graph *graph,
@@ -240,6 +279,7 @@ bool node_graph_parse(
 
         char color[7] = {0};
         bool has_color = false;
+        SDL_Texture *image = NULL;
         bool declaration = false;
         bool is_connection = false;
         bool bidirectional = false;
@@ -255,7 +295,12 @@ bool node_graph_parse(
                 goto cleanup;
             }
 
-            if (!parse_optional_color(parser, color, &has_color)) {
+            if (!parse_node_attributes(
+                parser,
+                color,
+                &has_color,
+                &image
+            )) {
                 free(first);
                 free(identifier);
                 goto cleanup;
@@ -265,7 +310,8 @@ bool node_graph_parse(
                 graph,
                 first,
                 identifier,
-                has_color ? color : NULL
+                has_color ? color : NULL,
+                image
             )) {
                 free(first);
                 free(identifier);
@@ -312,7 +358,12 @@ bool node_graph_parse(
         } else if (!declaration &&
                    parser->source[parser->position] != '-' &&
                    parser->source[parser->position] != '<') {
-            if (!parse_optional_color(parser, color, &has_color)) {
+            if (!parse_node_attributes(
+                parser,
+                color,
+                &has_color,
+                &image
+            )) {
                 free(first);
                 goto cleanup;
             }
@@ -321,7 +372,8 @@ bool node_graph_parse(
                 graph,
                 first,
                 NULL,
-                has_color ? color : NULL
+                has_color ? color : NULL,
+                image
             )) {
                 free(first);
                 goto cleanup;
@@ -448,6 +500,114 @@ static void draw_filled_circle(
         int x = (int)sqrt(radius * radius - y * y);
         SDL_RenderDrawLine(renderer, cx - x, cy + y, cx + x, cy + y);
     }
+}
+
+static void draw_image_in_circle(
+    SDL_Renderer *renderer,
+    SDL_Texture *image,
+    int cx,
+    int cy,
+    int radius
+) {
+    if (radius <= 0) {
+        return;
+    }
+
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    enum { SEGMENTS = 48 };
+    SDL_Vertex vertices[SEGMENTS + 2];
+    int indices[SEGMENTS * 3];
+    const SDL_Color white = {255, 255, 255, 255};
+
+    vertices[0].position = (SDL_FPoint){(float)cx, (float)cy};
+    vertices[0].color = white;
+    vertices[0].tex_coord = (SDL_FPoint){0.5f, 0.5f};
+
+    for (int i = 0; i <= SEGMENTS; i++) {
+        double angle = 2.0 * PI * i / SEGMENTS;
+        float u = (float)(0.5 + cos(angle) * 0.5);
+        float v = (float)(0.5 + sin(angle) * 0.5);
+        int vertex = i + 1;
+
+        vertices[vertex].position = (SDL_FPoint) {
+            (float)cx + (float)(cos(angle) * radius),
+            (float)cy + (float)(sin(angle) * radius)
+        };
+        vertices[vertex].color = white;
+        vertices[vertex].tex_coord = (SDL_FPoint){u, v};
+
+        if (i > 0) {
+            int triangle = (i - 1) * 3;
+            indices[triangle] = 0;
+            indices[triangle + 1] = i;
+            indices[triangle + 2] = i + 1;
+        }
+    }
+
+    if (SDL_RenderGeometry(
+            renderer,
+            image,
+            vertices,
+            SEGMENTS + 2,
+            indices,
+            SEGMENTS * 3
+        ) != 0) {
+        fprintf(stderr, "could not render node image: %s\n", SDL_GetError());
+    }
+#else
+    int texture_width;
+    int texture_height;
+
+    if (SDL_QueryTexture(image, NULL, NULL, &texture_width, &texture_height) != 0) {
+        fprintf(stderr, "could not query node image: %s\n", SDL_GetError());
+        return;
+    }
+
+    int diameter = radius * 2;
+
+    for (int y = -radius; y <= radius; y++) {
+        int half_width = (int)sqrt(radius * radius - y * y);
+        double left = (double)(radius - half_width) / diameter;
+        double right = (double)(radius + half_width + 1) / diameter;
+        double top = (double)(y + radius) / diameter;
+        double bottom = (double)(y + radius + 1) / diameter;
+        int source_x = (int)floor(left * texture_width);
+        int source_y = (int)floor(top * texture_height);
+        int source_right = (int)ceil(right * texture_width);
+        int source_bottom = (int)ceil(bottom * texture_height);
+
+        if (source_x >= texture_width)
+            source_x = texture_width - 1;
+        if (source_y >= texture_height)
+            source_y = texture_height - 1;
+        if (source_right > texture_width)
+            source_right = texture_width;
+        if (source_bottom > texture_height)
+            source_bottom = texture_height;
+        if (source_right <= source_x)
+            source_right = source_x + 1;
+        if (source_bottom <= source_y)
+            source_bottom = source_y + 1;
+
+        SDL_Rect source = {
+            source_x,
+            source_y,
+            source_right - source_x,
+            source_bottom - source_y
+        };
+        SDL_Rect destination = {
+            cx - half_width,
+            cy + y,
+            half_width * 2 + 1,
+            1
+        };
+
+        if (SDL_RenderCopy(renderer, image, &source, &destination) != 0) {
+            fprintf(stderr, "could not render node image: %s\n", SDL_GetError());
+            return;
+        }
+    }
+#endif
 }
 
 static void draw_text(
@@ -663,6 +823,18 @@ void node_graph_draw(
             position.y,
             node_radius
         );
+
+        const Node *node = &graph->data.nodes.nodes[i];
+
+        if (node->image) {
+            draw_image_in_circle(
+                renderer,
+                node->image,
+                position.x,
+                position.y,
+                node_radius - 2
+            );
+        }
 
         const char *label = graph->data.nodes.nodes[i].name;
 

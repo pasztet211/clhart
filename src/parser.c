@@ -667,6 +667,54 @@ char *parse_name(Parser *p, ChartConfig *config) {
     return name;
 }
 
+SDL_Texture *parse_image_reference(Parser *p) {
+    skip_whitespace(p);
+
+    if (strncmp(p->source + p->position, "\"*)", 3) != 0) {
+        return NULL;
+    }
+
+    p->position += 3;
+
+    size_t start = p->position;
+
+    while (p->source[p->position] &&
+           strncmp(p->source + p->position, "(*\"", 3) != 0) {
+        p->position++;
+    }
+
+    if (!p->source[p->position]) {
+        fprintf(stderr, "unterminated image reference\n");
+        return NULL;
+    }
+
+    size_t length = p->position - start;
+
+    if (length == 0) {
+        fprintf(stderr, "empty image reference\n");
+        return NULL;
+    }
+
+    char *name = malloc(length + 1);
+
+    if (!name)
+        return NULL;
+
+    memcpy(name, p->source + start, length);
+    name[length] = '\0';
+
+    p->position += 3;
+
+    SDL_Texture *texture = get_image(p->images, name);
+
+    if (!texture) {
+        fprintf(stderr, "unknown image: %s\n", name);
+    }
+
+    free(name);
+    return texture;
+}
+
 bool parse_graph(
     Parser *p,
     Graph *graph,
@@ -675,6 +723,7 @@ bool parse_graph(
 ) {
     Settings settings = {0};
     ImageRegistry *images = NULL;
+    ImageRegistry *parent_images = p->images;
 
     bool success = false;
     bool type_seen = false;
@@ -793,6 +842,7 @@ bool parse_graph(
             }
 
             init_image_registry(images);
+            p->images = images;
 
             if (!parse_images(p, config, images, renderer)) {
                 goto cleanup;
@@ -884,6 +934,7 @@ cleanup:
         free_image_registry(images);
         free(images);
     }
+    p->images = parent_images;
 
     if (!success) {
         free(config->title);
@@ -960,6 +1011,7 @@ bool parse_file(
     Parser parser = {
         .source = source,
         .position = 0,
+        .images = NULL,
         .renderer = renderer
     };
 

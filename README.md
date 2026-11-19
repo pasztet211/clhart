@@ -60,11 +60,24 @@ you can make a comment in 2 ways:
 - `.setup {}` changes graph settings
 - `.title {[title]}` adds a title
 - `.type {}` specifies the graph type
+- `.images {}` loads named images for use in charts
+
+Declare each image name and file path in `.images`; then refer to it in chart data with `"*)image name(*"`:
+
+```text
+.images {
+    "image name" --- (*"images/picture.png"*)
+}
+```
 
 #### Setup parameters
 - `show_labels` displays identifiers instead of names
 - `legend` displays a color-coded legend
 - `no_underscore_names` makes all display names render spaces instead of underscores (`_`)
+
+#### Misc
+
+- a data object can reference a named image with `"*)image name(*"`; the image is drawn to the data
 
 ### graph types:
 
@@ -105,7 +118,7 @@ parameters {
     * advance_angle
 
 - to connect nodes you can do either `<->`, `<--` or `-->` to change the way they connect
-- to make a node write its display name then `---` and right after an optional identifier and/or color
+- to make a node write its display name then `---` and right after an optional identifier, image reference, and/or color
 
 - egg sample:
 
@@ -122,16 +135,17 @@ nodes {
 #### pie:
 
 - its specific setup parameters are:
-    * show_percentaeges
+    * show_precentages
     * three_dimensional
 
-- to make a slice write its name then `---` then the amount of the slice and then an optional color
+- to make a slice write its name then `---` then the amount, followed by an optional image reference and/or color
+- a slice image is scaled down to fit inside the slice while preserving its aspect ratio
 
 - egg sample:
 
 ```text
 slices {
-    [slice name] --- [amount] :[optional hex color]:,
+    [slice name] --- [amount] "*)image name(*" :[optional hex color]:,
     [slice name] --- [amount] :[optional hex color]:
 }
 ```

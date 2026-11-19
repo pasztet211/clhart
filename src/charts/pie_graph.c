@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define PI 3.14159265358979323846
 
@@ -36,27 +37,45 @@ static bool parse_slice(
 
     p->position = (size_t)(end - p->source);
 
-    skip_whitespace(p);
+    bool image_seen = false;
+    bool color_seen = false;
 
-    if (expect(p, ':')) {
-        if (!expect(p, '#'))
-            goto failure;
+    while (true) {
+        skip_whitespace(p);
 
-        for (int i = 0; i < 6; i++) {
-            char c = p->source[p->position++];
+        if (!image_seen &&
+            strncmp(p->source + p->position, "\"*)", 3) == 0) {
+            slice.image = parse_image_reference(p);
 
-            if (!isxdigit((unsigned char)c))
+            if (!slice.image)
                 goto failure;
 
-            slice.color[i] = c;
+            image_seen = true;
+        } else if (!color_seen && p->source[p->position] == ':') {
+            p->position++;
+
+            if (!expect(p, '#'))
+                goto failure;
+
+            for (int i = 0; i < 6; i++) {
+                char c = p->source[p->position++];
+
+                if (!isxdigit((unsigned char)c))
+                    goto failure;
+
+                slice.color[i] = c;
+            }
+
+            slice.color[6] = '\0';
+
+            if (!expect(p, ':'))
+                goto failure;
+
+            slice.has_color = true;
+            color_seen = true;
+        } else {
+            break;
         }
-
-        slice.color[6] = '\0';
-
-        if (!expect(p, ':'))
-            goto failure;
-
-        slice.has_color = true;
     }
 
     PieSlice *new_slices = realloc(
@@ -225,17 +244,101 @@ static void draw_slice(
         indices[i * 3 + 2] = i + 2;
     }
 
-    SDL_RenderGeometry(
-        renderer,
-        NULL,
-        vertices,
-        segments + 2,
-        indices,
-        segments * 3
-    );
+    if (SDL_RenderGeometry(
+            renderer,
+            NULL,
+            vertices,
+            segments + 2,
+            indices,
+            segments * 3
+        ) != 0) {
+        fprintf(stderr, "could not render pie slice: %s\n", SDL_GetError());
+    }
 
     free(vertices);
     free(indices);
+}
+
+static void draw_slice_image(
+    SDL_Renderer *renderer,
+    SDL_Texture *image,
+    float cx,
+    float cy,
+    float radius,
+    double start_angle,
+    double advance_angle,
+    float squash
+) {
+    int texture_width;
+    int texture_height;
+
+    if (SDL_QueryTexture(
+            image,
+            NULL,
+            NULL,
+            &texture_width,
+            &texture_height
+        ) != 0) {
+        fprintf(stderr, "could not query pie slice image: %s\n", SDL_GetError());
+        return;
+    }
+
+    if (texture_width <= 0 || texture_height <= 0 || squash <= 0.0f) {
+        fprintf(stderr, "pie slice image has invalid dimensions\n");
+        return;
+    }
+
+    double center_radius;
+    double available_radius;
+
+    if (advance_angle >= 2.0 * PI - 1e-6) {
+        center_radius = 0.0;
+        available_radius = radius;
+    } else {
+        center_radius = radius * 0.6;
+        double minor_angle = fmin(advance_angle, 2.0 * PI - advance_angle);
+        double radial_edge_distance = center_radius *
+            sin(minor_angle / 2.0);
+
+        available_radius = fmin(
+            fmin(center_radius, radius - center_radius),
+            radial_edge_distance
+        );
+    }
+
+    if (available_radius <= 0.0) {
+        return;
+    }
+
+    double scaled_texture_height = (double)texture_height / squash;
+    double scale = 2.0 * available_radius / sqrt(
+        (double)texture_width * texture_width +
+        scaled_texture_height * scaled_texture_height
+    );
+    int image_width = (int)lround(texture_width * scale);
+    int image_height = (int)lround(texture_height * scale);
+
+    if (image_width <= 0 || image_height <= 0) {
+        return;
+    }
+
+    double middle_angle = start_angle + advance_angle / 2.0;
+    int image_center_x = (int)lround(
+        cx + cos(middle_angle) * center_radius
+    );
+    int image_center_y = (int)lround(
+        cy + sin(middle_angle) * center_radius * squash
+    );
+    SDL_Rect destination = {
+        image_center_x - image_width / 2,
+        image_center_y - image_height / 2,
+        image_width,
+        image_height
+    };
+
+    if (SDL_RenderCopy(renderer, image, NULL, &destination) != 0) {
+        fprintf(stderr, "could not render pie slice image: %s\n", SDL_GetError());
+    }
 }
 
 static void draw_percentage(
@@ -415,6 +518,19 @@ void pie_graph_draw(
             color,
             squash
         );
+
+        if (slice->image) {
+            draw_slice_image(
+                renderer,
+                slice->image,
+                cx,
+                cy,
+                radius,
+                angle,
+                advance,
+                squash
+            );
+        }
 
         angle += advance;
     }
