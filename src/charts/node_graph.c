@@ -222,17 +222,18 @@ static bool parse_node_attributes(
     while (true) {
         skip_whitespace(parser);
 
-        if (!image_seen &&
-            strncmp(parser->source + parser->position, "\"*)", 3) == 0) {
-            *image = parse_image_reference(parser);
-
-            if (!*image) {
+        if (!image_seen) {
+            if (!parse_optional_image_reference(parser, image)) {
                 return false;
             }
 
-            image_seen = true;
-        } else if (!color_seen &&
-                   parser->source[parser->position] == ':') {
+            if (*image) {
+                image_seen = true;
+                continue;
+            }
+        }
+
+        if (!color_seen && parser->source[parser->position] == ':') {
             if (!parse_optional_color(parser, color, has_color)) {
                 return false;
             }

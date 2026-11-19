@@ -2,7 +2,7 @@
 ![SDL2](https://img.shields.io/badge/SDL2-required-green?style=flat-square)
 ![SDL2_ttf](https://img.shields.io/badge/SDL2_ttf-required-green?style=flat-square)
 
-![version](https://img.shields.io/badge/version-v1.2.6-orange?style=flat-square)
+![version](https://img.shields.io/badge/version-v1.3.0-orange?style=flat-square)
 
 # Clhart
 graphing software/language
@@ -93,6 +93,7 @@ Declare each image name and file path in `.images`; then refer to it in chart da
 ##### Fuzzy:
 
 - its data is written like the following:
+- fuzzy parameters do not support images
 
 ```text
 parameters {
@@ -107,9 +108,11 @@ parameters {
 
 ```text
 parameters {
-    [parameter display name] --- range start;range end|amount :color:,
+    [parameter display name] --- range start;range end|amount "*)image name(*" :color:,
 }
 ```
+
+- distribution parameter images are scaled down to fit inside their bars; image references and colors are optional and can appear in either order
 
 #### nodes:
 
@@ -178,6 +181,7 @@ bars {
     * y_max
 
 - to make a column chart, first define its categories, then define its data series
+- category entries may reference images; images belong to categories, not data series, and are scaled to fit below the category on the x-axis
 - each series has a name, followed by `---`, its values separated by `;`, and an optional color
 - each value corresponds to a category in the same position
 - if categories are not specified, they are generated automatically
@@ -186,7 +190,7 @@ bars {
 
 ```text
 categories {
-    [category name],
+    [category name] "*)image name(*",
     [category name],
     [category name]
 }
@@ -200,6 +204,7 @@ columns {
 #### line:
 
 - line charts use the same `categories` and series syntax as column charts
+- category images are attached to the x-axis categories, not to line series
 - each series is drawn as a line connecting its values across the categories
 - setup parameters are `show_values`, `show_axis_numbers`, and `height_range`
 

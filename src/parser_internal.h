@@ -40,5 +40,6 @@ bool parse_graph(
 bool column_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
 bool line_graph_parse(Parser *p, Graph *graph, ChartConfig *config);
 SDL_Texture *parse_image_reference(Parser *p);
+bool parse_optional_image_reference(Parser *p, SDL_Texture **image);
 
 #endif

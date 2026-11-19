@@ -1,5 +1,6 @@
 #include "histogram_graph.h"
 #include "parser_internal.h"
+#include "renderer.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -138,27 +139,48 @@ static bool parse_distribution_parameter(
         goto failure;
     }
 
-    skip_whitespace(p);
+    bool image_seen = false;
+    bool color_seen = false;
 
-    if (expect(p, ':')) {
-        if (!expect(p, '#'))
-            goto failure;
+    while (true) {
+        skip_whitespace(p);
 
-        for (int i = 0; i < 6; i++) {
-            char c = p->source[p->position++];
-
-            if (!isxdigit((unsigned char)c))
+        if (!image_seen) {
+            if (!parse_optional_image_reference(p, &parameter.image))
                 goto failure;
 
-            parameter.color[i] = c;
+            if (parameter.image) {
+                image_seen = true;
+                continue;
+            }
         }
 
-        parameter.color[6] = '\0';
+        if (!color_seen && p->source[p->position] == ':') {
+            p->position++;
 
-        if (!expect(p, ':'))
-            goto failure;
+            if (!expect(p, '#'))
+                goto failure;
 
-        parameter.has_color = true;
+            for (int i = 0; i < 6; i++) {
+                char c = p->source[p->position++];
+
+                if (!isxdigit((unsigned char)c))
+                    goto failure;
+
+                parameter.color[i] = c;
+            }
+
+            parameter.color[6] = '\0';
+
+            if (!expect(p, ':'))
+                goto failure;
+
+            parameter.has_color = true;
+            color_seen = true;
+            continue;
+        }
+
+        break;
     }
 
     DistributionParameter *new_parameters = realloc(
@@ -732,6 +754,10 @@ void histogram_graph_draw(
             };
 
             SDL_RenderFillRect(renderer, &column);
+
+            if (parameter->image) {
+                draw_image_fit(renderer, parameter->image, column);
+            }
         }
 
         SDL_RenderSetClipRect(renderer, NULL);

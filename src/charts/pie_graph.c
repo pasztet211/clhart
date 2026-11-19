@@ -5,7 +5,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define PI 3.14159265358979323846
 
@@ -43,15 +42,17 @@ static bool parse_slice(
     while (true) {
         skip_whitespace(p);
 
-        if (!image_seen &&
-            strncmp(p->source + p->position, "\"*)", 3) == 0) {
-            slice.image = parse_image_reference(p);
-
-            if (!slice.image)
+        if (!image_seen) {
+            if (!parse_optional_image_reference(p, &slice.image))
                 goto failure;
 
-            image_seen = true;
-        } else if (!color_seen && p->source[p->position] == ':') {
+            if (slice.image) {
+                image_seen = true;
+                continue;
+            }
+        }
+
+        if (!color_seen && p->source[p->position] == ':') {
             p->position++;
 
             if (!expect(p, '#'))
@@ -73,9 +74,10 @@ static bool parse_slice(
 
             slice.has_color = true;
             color_seen = true;
-        } else {
-            break;
+            continue;
         }
+
+        break;
     }
 
     PieSlice *new_slices = realloc(

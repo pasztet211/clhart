@@ -22,6 +22,63 @@ static int scale_legend_dimension(int dimension, double scale) {
     return scaled > 0 ? scaled : 1;
 }
 
+void draw_image_fit(
+    SDL_Renderer *renderer,
+    SDL_Texture *image,
+    SDL_Rect bounds
+) {
+    if (!renderer || !image || bounds.w <= 0 || bounds.h <= 0) {
+        return;
+    }
+
+    int image_width;
+    int image_height;
+
+    if (SDL_QueryTexture(
+            image,
+            NULL,
+            NULL,
+            &image_width,
+            &image_height
+        ) != 0) {
+        fprintf(stderr, "could not query image dimensions: %s\n", SDL_GetError());
+        return;
+    }
+
+    if (image_width <= 0 || image_height <= 0) {
+        fprintf(stderr, "image has invalid dimensions\n");
+        return;
+    }
+
+    double scale = fmin(
+        (double)bounds.w / image_width,
+        (double)bounds.h / image_height
+    );
+
+    if (scale > 1.0) {
+        scale = 1.0;
+    }
+
+    int scaled_width = (int)lround(image_width * scale);
+    int scaled_height = (int)lround(image_height * scale);
+
+    if (scaled_width <= 0)
+        scaled_width = 1;
+    if (scaled_height <= 0)
+        scaled_height = 1;
+
+    SDL_Rect destination = {
+        bounds.x + (bounds.w - scaled_width) / 2,
+        bounds.y + (bounds.h - scaled_height) / 2,
+        scaled_width,
+        scaled_height
+    };
+
+    if (SDL_RenderCopy(renderer, image, NULL, &destination) != 0) {
+        fprintf(stderr, "could not render image: %s\n", SDL_GetError());
+    }
+}
+
 static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
 }

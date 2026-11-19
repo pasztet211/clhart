@@ -1,5 +1,6 @@
 #include "column_graph.h"
 #include "parser_internal.h"
+#include "renderer.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -18,9 +19,16 @@ static bool parse_column_category(
     if (!category)
         return false;
 
-    char **new_categories = realloc(
+    SDL_Texture *image = NULL;
+
+    if (!parse_optional_image_reference(p, &image)) {
+        free(category);
+        return false;
+    }
+
+    ColumnCategory *new_categories = realloc(
         column->categories,
-        sizeof(char *) * (column->category_count + 1)
+        sizeof(ColumnCategory) * (column->category_count + 1)
     );
 
     if (!new_categories) {
@@ -29,7 +37,10 @@ static bool parse_column_category(
     }
 
     column->categories = new_categories;
-    column->categories[column->category_count++] = category;
+    column->categories[column->category_count++] = (ColumnCategory) {
+        .name = category,
+        .image = image
+    };
 
     return true;
 }
@@ -222,7 +233,7 @@ static bool generate_categories(ColumnGraph *column) {
 
         column->categories = calloc(
             (size_t)category_count,
-            sizeof(char *)
+            sizeof(ColumnCategory)
         );
 
         if (!column->categories)
@@ -233,12 +244,12 @@ static bool generate_categories(ColumnGraph *column) {
 
             snprintf(label, sizeof(label), "%d", i + 1);
 
-            column->categories[i] = malloc(strlen(label) + 1);
+            column->categories[i].name = malloc(strlen(label) + 1);
 
-            if (!column->categories[i])
+            if (!column->categories[i].name)
                 return false;
 
-            strcpy(column->categories[i], label);
+            strcpy(column->categories[i].name, label);
         }
     }
 
@@ -699,6 +710,21 @@ void column_graph_draw(
     SDL_RenderSetClipRect(renderer, NULL);
 
     // Category labels and optional value labels
+    bool has_category_images = false;
+
+    for (int category = 0; category < category_count; category++) {
+        if (column->categories[category].image) {
+            has_category_images = true;
+            break;
+        }
+    }
+
+    int category_image_height = has_category_images
+        ? (int)lround(36 * scale)
+        : 0;
+    if (has_category_images && category_image_height < 1)
+        category_image_height = 1;
+
     for (int category = 0; category < category_count; category++) {
         float group_start =
             left + slot_width * category +
@@ -708,12 +734,30 @@ void column_graph_draw(
             left + slot_width * (category + 0.5f)
         );
 
+        if (column->categories[category].image) {
+            int image_width = (int)floor(slot_width * 0.75f);
+            SDL_Rect image_bounds = {
+                center_x - image_width / 2,
+                bottom + 4,
+                image_width,
+                category_image_height
+            };
+
+            draw_image_fit(
+                renderer,
+                column->categories[category].image,
+                image_bounds
+            );
+        }
+
         draw_column_text_centered(
             renderer,
             font,
-            column->categories[category],
+            column->categories[category].name,
             center_x,
-            bottom + 12,
+            bottom + 12 + (category_image_height > 0
+                ? category_image_height + 4
+                : 0),
             category,
             text_color
         );

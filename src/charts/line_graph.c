@@ -238,6 +238,21 @@ void line_graph_draw(
 
     SDL_RenderSetClipRect(renderer, NULL);
 
+    bool has_category_images = false;
+
+    for (int category = 0; category < category_count; category++) {
+        if (line->categories[category].image) {
+            has_category_images = true;
+            break;
+        }
+    }
+
+    int category_image_height = has_category_images
+        ? (int)lround(36 * scale)
+        : 0;
+    if (has_category_images && category_image_height < 1)
+        category_image_height = 1;
+
     for (int category = 0; category < category_count; category++) {
         int x = category_count == 1
             ? (left + right) / 2
@@ -245,19 +260,38 @@ void line_graph_draw(
                            (category_count - 1));
         int text_width;
         int text_height;
+        const ColumnCategory *category_data = &line->categories[category];
+
+        if (category_data->image) {
+            int category_spacing = category_count == 1
+                ? right - left
+                : (right - left) / (category_count - 1);
+            int image_width = (int)floor(category_spacing * 0.75);
+            SDL_Rect image_bounds = {
+                x - image_width / 2,
+                bottom + 4,
+                image_width,
+                category_image_height
+            };
+
+            draw_image_fit(renderer, category_data->image, image_bounds);
+        }
 
         if (TTF_SizeUTF8(
             font,
-            line->categories[category],
+            category_data->name,
             &text_width,
             &text_height
         ) == 0) {
             int label_y = bottom + 12 +
+                (category_image_height > 0
+                    ? category_image_height + 4
+                    : 0) +
                 (category % 2 == 0 ? text_height : 0);
             draw_line_text(
                 renderer,
                 font,
-                line->categories[category],
+                category_data->name,
                 x - text_width / 2,
                 label_y,
                 text_color

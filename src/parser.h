@@ -184,21 +184,23 @@ typedef struct {
 
 typedef struct {
     char *name;
-
     double *values;
     int value_count;
 
     char color[7];
     bool has_color;
-
-    SDL_Texture *image;
 } ColumnSeries;
+
+typedef struct {
+    char *name;
+    SDL_Texture *image;
+} ColumnCategory;
 
 typedef struct {
     ColumnSeries *series;
     int series_count;
 
-    char **categories;
+    ColumnCategory *categories;
     int category_count;
     bool has_categories;
 } ColumnGraph;

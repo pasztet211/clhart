@@ -13,6 +13,11 @@
 
 bool renderer_create(SDL_Window **window, SDL_Renderer **renderer);
 void renderer_destroy(SDL_Window *window, SDL_Renderer *renderer);
+void draw_image_fit(
+    SDL_Renderer *renderer,
+    SDL_Texture *image,
+    SDL_Rect bounds
+);
 bool render_graph(
     const Graph *graph,
     const char *font_path,

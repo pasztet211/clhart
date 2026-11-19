@@ -715,6 +715,22 @@ SDL_Texture *parse_image_reference(Parser *p) {
     return texture;
 }
 
+bool parse_optional_image_reference(Parser *p, SDL_Texture **image) {
+    if (!p || !image) {
+        return false;
+    }
+
+    *image = NULL;
+    skip_whitespace(p);
+
+    if (strncmp(p->source + p->position, "\"*)", 3) != 0) {
+        return true;
+    }
+
+    *image = parse_image_reference(p);
+    return *image != NULL;
+}
+
 bool parse_graph(
     Parser *p,
     Graph *graph,
@@ -1113,7 +1129,7 @@ void free_graph(Graph *graph, ChartType type) {
                 }
 
                 for (int i = 0; i < series_graph->category_count; i++) {
-                    free(series_graph->categories[i]);
+                    free(series_graph->categories[i].name);
                 }
 
                 free(series_graph->series);
