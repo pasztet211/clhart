@@ -29,6 +29,7 @@ typedef struct {
 
 #define WINDOW_WIDTH RENDERER_BASE_WIDTH
 #define WINDOW_HEIGHT RENDERER_BASE_HEIGHT
+#define EXPORT_SCALE 2
 
 static int scale_legend_dimension(int dimension, double scale) {
     int scaled = (int)lround(dimension * scale);
@@ -94,6 +95,46 @@ void draw_image_fit(
 
 static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+}
+
+static void draw_chart_frame(
+    SDL_Renderer *renderer,
+    TTF_Font *font,
+    const Graph *graph,
+    const ChartConfig *config
+) {
+    set_color(renderer, 24, 26, 32);
+    SDL_RenderClear(renderer);
+
+    switch (config->type) {
+        case CHART_NODES:
+            node_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_HISTOGRAM:
+            histogram_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_PIE:
+            pie_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_BAR:
+            bar_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_COMBINATION:
+            combination_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_COLUMN:
+            column_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_LINE:
+            line_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+    }
+
+    if (config->type != CHART_COMBINATION) {
+        draw_legend(renderer, font, graph, config, WINDOW_WIDTH, 1.0);
+    }
+
+    draw_title(renderer, font, config->title, WINDOW_WIDTH);
 }
 
 static void write_png_data(void *context, void *data, int size) {
@@ -273,23 +314,35 @@ static char *get_output_base_name(
 
 static bool save_chart_png(
     SDL_Renderer *renderer,
-    const char *chart_path,
-    const char *title
+    TTF_Font *font,
+    const Graph *graph,
+    const ChartConfig *config,
+    const char *chart_path
 ) {
-    char *base_name = get_output_base_name(chart_path, title);
+    char *base_name = get_output_base_name(chart_path, config->title);
 
     if (!base_name) {
         fprintf(stderr, "could not create a valid PNG filename\n");
         return false;
     }
 
-    int width;
-    int height;
+    int window_width;
+    int window_height;
 
-    if (SDL_GetRendererOutputSize(renderer, &width, &height) != 0 ||
-        width <= 0 || height <= 0 || width > INT_MAX / 4 ||
-        (size_t)width > SIZE_MAX / 4 / (size_t)height) {
+    if (SDL_GetRendererOutputSize(renderer, &window_width, &window_height) != 0 ||
+        window_width <= 0 || window_height <= 0 ||
+        window_width > INT_MAX / (EXPORT_SCALE * 4) ||
+        window_height > INT_MAX / EXPORT_SCALE) {
         fprintf(stderr, "could not determine chart image dimensions: %s\n", SDL_GetError());
+        free(base_name);
+        return false;
+    }
+
+    int width = window_width * EXPORT_SCALE;
+    int height = window_height * EXPORT_SCALE;
+
+    if ((size_t)width > SIZE_MAX / 4 / (size_t)height) {
+        fprintf(stderr, "chart image dimensions are too large to export\n");
         free(base_name);
         return false;
     }
@@ -304,14 +357,74 @@ static bool save_chart_png(
         return false;
     }
 
-    if (SDL_RenderReadPixels(
-            renderer,
-            NULL,
-            SDL_PIXELFORMAT_RGBA32,
-            pixels,
-            stride
-        ) != 0) {
-        fprintf(stderr, "could not read chart image pixels: %s\n", SDL_GetError());
+    if (!SDL_RenderTargetSupported(renderer)) {
+        fprintf(stderr, "renderer does not support high-resolution image export\n");
+        free(pixels);
+        free(base_name);
+        return false;
+    }
+
+    SDL_Texture *export_target = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_RGBA32,
+        SDL_TEXTUREACCESS_TARGET,
+        width,
+        height
+    );
+
+    if (!export_target) {
+        fprintf(stderr, "could not create high-resolution image target: %s\n", SDL_GetError());
+        free(pixels);
+        free(base_name);
+        return false;
+    }
+
+    SDL_Texture *previous_target = SDL_GetRenderTarget(renderer);
+    float previous_scale_x;
+    float previous_scale_y;
+    SDL_RenderGetScale(renderer, &previous_scale_x, &previous_scale_y);
+
+    if (SDL_SetRenderTarget(renderer, export_target) != 0) {
+        fprintf(stderr, "could not select high-resolution image target: %s\n", SDL_GetError());
+        SDL_DestroyTexture(export_target);
+        free(pixels);
+        free(base_name);
+        return false;
+    }
+
+    bool capture_success = true;
+
+    if (SDL_RenderSetScale(renderer, (float)EXPORT_SCALE, (float)EXPORT_SCALE) != 0) {
+        fprintf(stderr, "could not set high-resolution render scale: %s\n", SDL_GetError());
+        capture_success = false;
+    } else {
+        draw_chart_frame(renderer, font, graph, config);
+
+        if (SDL_RenderReadPixels(
+                renderer,
+                NULL,
+                SDL_PIXELFORMAT_RGBA32,
+                pixels,
+                stride
+            ) != 0) {
+            fprintf(stderr, "could not read high-resolution chart pixels: %s\n", SDL_GetError());
+            capture_success = false;
+        }
+    }
+
+    if (SDL_SetRenderTarget(renderer, previous_target) != 0) {
+        fprintf(stderr, "could not restore render target: %s\n", SDL_GetError());
+        capture_success = false;
+    }
+
+    if (SDL_RenderSetScale(renderer, previous_scale_x, previous_scale_y) != 0) {
+        fprintf(stderr, "could not restore render scale: %s\n", SDL_GetError());
+        capture_success = false;
+    }
+
+    SDL_DestroyTexture(export_target);
+
+    if (!capture_success) {
         free(pixels);
         free(base_name);
         return false;
@@ -422,7 +535,9 @@ bool renderer_create(SDL_Window **window, SDL_Renderer **renderer) {
     *renderer = SDL_CreateRenderer(
         *window,
         -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+        SDL_RENDERER_ACCELERATED |
+        SDL_RENDERER_PRESENTVSYNC |
+        SDL_RENDERER_TARGETTEXTURE
     );
 
     if (!*renderer) {
@@ -809,98 +924,11 @@ bool render_graph(
             }
         }
 
-        // Background
-        set_color(renderer, 24, 26, 32);
-        SDL_RenderClear(renderer);
-
-        switch (config->type) {
-            case CHART_NODES:
-                node_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-
-            case CHART_HISTOGRAM:
-                histogram_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-
-            case CHART_PIE:
-                pie_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-
-            case CHART_BAR:
-                bar_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-            
-            case CHART_COMBINATION:
-                combination_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-            
-            case CHART_COLUMN:
-                column_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-
-            case CHART_LINE:
-                line_graph_draw(
-                    renderer,
-                    font,
-                    graph,
-                    config,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT
-                );
-                break;
-        }
-        if (config->type != CHART_COMBINATION) {
-            draw_legend(renderer, font, graph, config, WINDOW_WIDTH, 1.0);
-        }
-        draw_title(renderer, font, config->title, WINDOW_WIDTH);
-
-        if (save_requested) {
-            save_chart_png(renderer, chart_path, config->title);
-        }
-
+        draw_chart_frame(renderer, font, graph, config);
         SDL_RenderPresent(renderer);
+        if (save_requested) {
+            save_chart_png(renderer, font, graph, config, chart_path);
+        }
     }
 
     TTF_CloseFont(font);

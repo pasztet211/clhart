@@ -41,9 +41,10 @@ nodes {
 
 3. run the file with clhart.exe
 
-Press **Ctrl+S** while viewing a chart to save it as a PNG in the same folder as
-the `.clh` file. The filename uses the chart title, or the `.clh` filename when
-there is no title. If that PNG already exists, a number is added to the filename.
+Press **Ctrl+S** while viewing a chart to save a PNG at twice the window's
+resolution in the same folder as the `.clh` file. The filename uses the chart
+title, or the `.clh` filename when there is no title. If that PNG already exists,
+a number is added to the filename.
 
 ## Usage:
 
