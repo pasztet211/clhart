@@ -7,12 +7,25 @@
 #include "column_graph.h"
 #include "line_graph.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../stb_image_write.h"
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    FILE *file;
+    bool failed;
+} PngWriteContext;
 
 #define WINDOW_WIDTH RENDERER_BASE_WIDTH
 #define WINDOW_HEIGHT RENDERER_BASE_HEIGHT
@@ -81,6 +94,300 @@ void draw_image_fit(
 
 static void set_color(SDL_Renderer *renderer, int r, int g, int b) {
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+}
+
+static void write_png_data(void *context, void *data, int size) {
+    PngWriteContext *write_context = context;
+
+    if (size < 0 ||
+        fwrite(data, 1, (size_t)size, write_context->file) != (size_t)size) {
+        write_context->failed = true;
+    }
+}
+
+static bool is_reserved_filename(const char *name) {
+    size_t stem_length = strcspn(name, ".");
+
+    if (stem_length == 3) {
+        char first = (char)toupper((unsigned char)name[0]);
+        char second = (char)toupper((unsigned char)name[1]);
+        char third = (char)toupper((unsigned char)name[2]);
+
+        if ((first == 'C' && second == 'O' && third == 'N') ||
+            (first == 'P' && second == 'R' && third == 'N') ||
+            (first == 'A' && second == 'U' && third == 'X') ||
+            (first == 'N' && second == 'U' && third == 'L')) {
+            return true;
+        }
+    }
+
+    if (stem_length == 4) {
+        char first = (char)toupper((unsigned char)name[0]);
+        char second = (char)toupper((unsigned char)name[1]);
+        char third = (char)toupper((unsigned char)name[2]);
+        char fourth = name[3];
+
+        return (first == 'C' && second == 'O' && third == 'M' &&
+                fourth >= '1' && fourth <= '9') ||
+            (first == 'L' && second == 'P' && third == 'T' &&
+                fourth >= '1' && fourth <= '9');
+    }
+
+    return false;
+}
+
+static char *make_safe_filename(const char *name, size_t length) {
+    char *safe_name = malloc(length + 2);
+
+    if (!safe_name) {
+        return NULL;
+    }
+
+    size_t safe_length = 0;
+
+    for (size_t i = 0; i < length; i++) {
+        unsigned char character = (unsigned char)name[i];
+
+        if (character < 32 || strchr("<>:\"/\\|?*", character)) {
+            safe_name[safe_length++] = '_';
+        } else {
+            safe_name[safe_length++] = (char)character;
+        }
+    }
+
+    while (safe_length > 0 &&
+           (safe_name[safe_length - 1] == '.' ||
+            safe_name[safe_length - 1] == ' ')) {
+        safe_length--;
+    }
+
+    if (safe_length == 0) {
+        free(safe_name);
+        return NULL;
+    }
+
+    safe_name[safe_length] = '\0';
+
+    if (is_reserved_filename(safe_name)) {
+        memmove(safe_name + 1, safe_name, safe_length + 1);
+        safe_name[0] = '_';
+    }
+
+    return safe_name;
+}
+
+static char *make_png_path(
+    const char *chart_path,
+    const char *base_name,
+    unsigned int collision
+) {
+    char *absolute_chart_path = _fullpath(NULL, chart_path, 0);
+
+    if (!absolute_chart_path) {
+        fprintf(stderr, "could not resolve chart path '%s'\n", chart_path);
+        return NULL;
+    }
+
+    const char *last_separator = strrchr(absolute_chart_path, '\\');
+    const char *forward_separator = strrchr(absolute_chart_path, '/');
+
+    if (!last_separator || (forward_separator && forward_separator > last_separator)) {
+        last_separator = forward_separator;
+    }
+
+    size_t directory_length = last_separator
+        ? (size_t)(last_separator - absolute_chart_path + 1)
+        : 0;
+    size_t base_length = strlen(base_name);
+    char collision_suffix[32] = "";
+
+    if (collision > 0) {
+        snprintf(collision_suffix, sizeof(collision_suffix), " (%u)", collision);
+    }
+
+    size_t suffix_length = strlen(collision_suffix);
+
+    if (directory_length > SIZE_MAX - base_length ||
+        directory_length + base_length > SIZE_MAX - suffix_length ||
+        directory_length + base_length + suffix_length >
+            SIZE_MAX - sizeof(".png")) {
+        free(absolute_chart_path);
+        return NULL;
+    }
+
+    size_t output_size =
+        directory_length + base_length + suffix_length + sizeof(".png");
+    char *output_path = malloc(output_size);
+
+    if (!output_path) {
+        free(absolute_chart_path);
+        return NULL;
+    }
+
+    char *cursor = output_path;
+    memcpy(cursor, absolute_chart_path, directory_length);
+    cursor += directory_length;
+    memcpy(cursor, base_name, base_length);
+    cursor += base_length;
+    memcpy(cursor, collision_suffix, suffix_length);
+    cursor += suffix_length;
+    memcpy(cursor, ".png", sizeof(".png"));
+
+    free(absolute_chart_path);
+    return output_path;
+}
+
+static char *get_output_base_name(
+    const char *chart_path,
+    const char *title
+) {
+    const char *name = title;
+    size_t name_length = title ? strlen(title) : 0;
+
+    if (name_length == 0) {
+        const char *last_separator = strrchr(chart_path, '\\');
+        const char *forward_separator = strrchr(chart_path, '/');
+
+        if (!last_separator ||
+            (forward_separator && forward_separator > last_separator)) {
+            last_separator = forward_separator;
+        }
+
+        name = last_separator ? last_separator + 1 : chart_path;
+        name_length = strlen(name);
+
+        const char *extension = strrchr(name, '.');
+        if (extension) {
+            name_length = (size_t)(extension - name);
+        }
+    }
+
+    char *base_name = make_safe_filename(name, name_length);
+
+    if (!base_name && title && title[0] != '\0') {
+        return get_output_base_name(chart_path, NULL);
+    }
+
+    return base_name;
+}
+
+static bool save_chart_png(
+    SDL_Renderer *renderer,
+    const char *chart_path,
+    const char *title
+) {
+    char *base_name = get_output_base_name(chart_path, title);
+
+    if (!base_name) {
+        fprintf(stderr, "could not create a valid PNG filename\n");
+        return false;
+    }
+
+    int width;
+    int height;
+
+    if (SDL_GetRendererOutputSize(renderer, &width, &height) != 0 ||
+        width <= 0 || height <= 0 || width > INT_MAX / 4 ||
+        (size_t)width > SIZE_MAX / 4 / (size_t)height) {
+        fprintf(stderr, "could not determine chart image dimensions: %s\n", SDL_GetError());
+        free(base_name);
+        return false;
+    }
+
+    int stride = width * 4;
+    size_t pixel_size = (size_t)stride * (size_t)height;
+    unsigned char *pixels = malloc(pixel_size);
+
+    if (!pixels) {
+        fprintf(stderr, "could not allocate chart image buffer\n");
+        free(base_name);
+        return false;
+    }
+
+    if (SDL_RenderReadPixels(
+            renderer,
+            NULL,
+            SDL_PIXELFORMAT_RGBA32,
+            pixels,
+            stride
+        ) != 0) {
+        fprintf(stderr, "could not read chart image pixels: %s\n", SDL_GetError());
+        free(pixels);
+        free(base_name);
+        return false;
+    }
+
+    unsigned int collision = 0;
+    char *output_path = NULL;
+    FILE *file = NULL;
+
+    while (true) {
+        free(output_path);
+        output_path = make_png_path(chart_path, base_name, collision);
+
+        if (!output_path) {
+            fprintf(stderr, "could not create chart image path\n");
+            break;
+        }
+
+        file = fopen(output_path, "wbx");
+
+        if (file) {
+            break;
+        }
+
+        if (errno != EEXIST) {
+            fprintf(stderr, "could not create '%s': %s\n", output_path, strerror(errno));
+            break;
+        }
+
+        if (collision == UINT_MAX) {
+            fprintf(stderr, "could not find an unused chart image filename\n");
+            break;
+        }
+
+        collision++;
+    }
+
+    bool saved = false;
+
+    if (file) {
+        PngWriteContext write_context = {
+            .file = file,
+            .failed = false
+        };
+        int write_result = stbi_write_png_to_func(
+            write_png_data,
+            &write_context,
+            width,
+            height,
+            4,
+            pixels,
+            stride
+        );
+
+        saved = write_result != 0 && !write_context.failed;
+
+        if (fflush(file) != 0) {
+            saved = false;
+        }
+
+        if (fclose(file) != 0) {
+            saved = false;
+        }
+
+        if (saved) {
+            printf("saved chart image to '%s'\n", output_path);
+        } else {
+            fprintf(stderr, "could not write chart image to '%s'\n", output_path);
+            remove(output_path);
+        }
+    }
+
+    free(output_path);
+    free(pixels);
+    free(base_name);
+    return saved;
 }
 
 bool renderer_create(SDL_Window **window, SDL_Renderer **renderer) {
@@ -412,11 +719,12 @@ void draw_legend(
 bool render_graph(
     const Graph *graph,
     const char *font_path,
+    const char *chart_path,
     const ChartConfig *config,
     SDL_Renderer *renderer
 ) {
-    if (!graph || !config || !renderer) {
-        fprintf(stderr, "cannot render without a graph, configuration, and renderer\n");
+    if (!graph || !chart_path || !config || !renderer) {
+        fprintf(stderr, "cannot render without a graph, chart path, configuration, and renderer\n");
         return false;
     }
 
@@ -488,10 +796,16 @@ bool render_graph(
 
     while (running) {
         SDL_Event event;
+        bool save_requested = false;
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
+            } else if (event.type == SDL_KEYDOWN &&
+                       event.key.repeat == 0 &&
+                       event.key.keysym.sym == SDLK_s &&
+                       (event.key.keysym.mod & KMOD_CTRL) != 0) {
+                save_requested = true;
             }
         }
 
@@ -581,6 +895,10 @@ bool render_graph(
             draw_legend(renderer, font, graph, config, WINDOW_WIDTH, 1.0);
         }
         draw_title(renderer, font, config->title, WINDOW_WIDTH);
+
+        if (save_requested) {
+            save_chart_png(renderer, chart_path, config->title);
+        }
 
         SDL_RenderPresent(renderer);
     }

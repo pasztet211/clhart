@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <errno.h>
+#include <stdint.h>
 
 typedef struct {
     char *name;
@@ -238,6 +239,43 @@ static char *parse_image_path(Parser *p) {
     return path;
 }
 
+static char *resolve_image_path(const Parser *p, const char *path) {
+    if (path[0] == '/' || path[0] == '\\' ||
+        (isalpha((unsigned char)path[0]) && path[1] == ':')) {
+        return _fullpath(NULL, path, 0);
+    }
+
+    const char *last_separator = strrchr(p->filename, '\\');
+    const char *forward_separator = strrchr(p->filename, '/');
+
+    if (!last_separator ||
+        (forward_separator && forward_separator > last_separator)) {
+        last_separator = forward_separator;
+    }
+
+    size_t directory_length = last_separator
+        ? (size_t)(last_separator - p->filename + 1)
+        : 0;
+    size_t path_length = strlen(path);
+
+    if (directory_length > SIZE_MAX - path_length - 1) {
+        return NULL;
+    }
+
+    char *relative_path = malloc(directory_length + path_length + 1);
+
+    if (!relative_path) {
+        return NULL;
+    }
+
+    memcpy(relative_path, p->filename, directory_length);
+    memcpy(relative_path + directory_length, path, path_length + 1);
+
+    char *full_path = _fullpath(NULL, relative_path, 0);
+    free(relative_path);
+    return full_path;
+}
+
 static bool parse_images(
     Parser *p,
     ChartConfig *config,
@@ -278,13 +316,24 @@ static bool parse_images(
             return false;
         }
 
-        if (!add_image(images, renderer, name, path)) {
-            fprintf(stderr, "could not load image '%s' from '%s'\n", name, path);
+        char *resolved_path = resolve_image_path(p, path);
+
+        if (!resolved_path) {
+            fprintf(stderr, "could not resolve image path '%s'\n", path);
             free(path);
             free(name);
             return false;
         }
 
+        if (!add_image(images, renderer, name, resolved_path)) {
+            fprintf(stderr, "could not load image '%s' from '%s'\n", name, resolved_path);
+            free(resolved_path);
+            free(path);
+            free(name);
+            return false;
+        }
+
+        free(resolved_path);
         free(path);
         free(name);
 
@@ -1026,6 +1075,7 @@ bool parse_file(
 
     Parser parser = {
         .source = source,
+        .filename = filename,
         .position = 0,
         .images = NULL,
         .renderer = renderer

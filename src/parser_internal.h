@@ -8,6 +8,7 @@
 
 typedef struct {
     const char *source;
+    const char *filename;
     size_t position;
     ImageRegistry *images;
     SDL_Renderer *renderer;

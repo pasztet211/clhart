@@ -41,6 +41,10 @@ nodes {
 
 3. run the file with clhart.exe
 
+Press **Ctrl+S** while viewing a chart to save it as a PNG in the same folder as
+the `.clh` file. The filename uses the chart title, or the `.clh` filename when
+there is no title. If that PNG already exists, a number is added to the filename.
+
 ## Usage:
 
 ### writing ranges:
@@ -69,6 +73,8 @@ Declare each image name and file path in `.images`; then refer to it in chart da
     "image name" --- (*"images/picture.png"*)
 }
 ```
+
+Relative image paths are resolved from the directory containing the `.clh` file.
 
 #### Setup parameters
 - `show_labels` displays identifiers instead of names

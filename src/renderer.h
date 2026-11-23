@@ -21,6 +21,7 @@ void draw_image_fit(
 bool render_graph(
     const Graph *graph,
     const char *font_path,
+    const char *chart_path,
     const ChartConfig *config,
     SDL_Renderer *renderer
 );

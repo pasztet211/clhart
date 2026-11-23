@@ -10,14 +10,22 @@
 static SDL_Texture *load_image(SDL_Renderer *renderer, const char *path)
 {
     int width, height, channels;
+    char *full_path = _fullpath(NULL, path, 0);
+
+    if (!full_path) {
+        fprintf(stderr, "image loading failed: could not resolve path '%s'\n", path);
+        return NULL;
+    }
 
     unsigned char *pixels = stbi_load(
-        path,
+        full_path,
         &width,
         &height,
         &channels,
         STBI_rgb_alpha
     );
+
+    free(full_path);
 
     if (!pixels) {
         fprintf(stderr, "image loading failed: %s\n", stbi_failure_reason());

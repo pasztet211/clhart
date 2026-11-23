@@ -28,6 +28,7 @@ int main(int argc, char *argv[]) {
     bool rendered = render_graph(
         graph,
         "C:/Windows/Fonts/arial.ttf",
+        argv[1],
         config,
         renderer
     );
