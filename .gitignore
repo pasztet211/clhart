@@ -1,2 +1,3 @@
 *.sh
 tests/
+usb_bundle/

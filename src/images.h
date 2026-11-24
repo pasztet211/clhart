@@ -17,6 +17,7 @@ typedef struct ImageRegistry {
 } ImageRegistry;
 
 void init_image_registry(ImageRegistry *registry);
+SDL_Texture *load_image_texture(SDL_Renderer *renderer, const char *path);
 bool add_image(ImageRegistry *registry, SDL_Renderer *renderer, const char *name, const char *path);
 SDL_Texture *get_image(ImageRegistry *registry, const char *name);
 void free_image_registry(ImageRegistry *registry);

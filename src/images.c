@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static SDL_Texture *load_image(SDL_Renderer *renderer, const char *path)
+SDL_Texture *load_image_texture(SDL_Renderer *renderer, const char *path)
 {
     int width, height, channels;
     char *full_path = _fullpath(NULL, path, 0);
@@ -74,7 +74,7 @@ bool add_image(ImageRegistry *registry, SDL_Renderer *renderer,
     if (get_image(registry, name))
         return false;
 
-    SDL_Texture *texture = load_image(renderer, path);
+    SDL_Texture *texture = load_image_texture(renderer, path);
 
     if (!texture)
         return false;

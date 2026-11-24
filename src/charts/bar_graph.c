@@ -1,5 +1,6 @@
 #include "bar_graph.h"
 #include "parser_internal.h"
+#include "renderer.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -233,6 +234,9 @@ void bar_graph_draw(
     float right = width - 70.0f * scale * 1.15f;
     float bottom = height -
         (settings->horizontal ? 100.0f : 140.0f) * scale * 1.15f;
+    if (config->global.xlabel && config->global.xlabel[0] != '\0') {
+        bottom -= TTF_FontHeight(font) + 12 * scale;
+    }
 
     float plot_width = right - left;
     float plot_height = bottom - top;
@@ -511,6 +515,18 @@ void bar_graph_draw(
                     );
                 }
             }
+
         }
     }
+
+    draw_axis_labels(
+        renderer,
+        font,
+        config,
+        (int)left,
+        (int)top,
+        (int)right,
+        (int)bottom,
+        height
+    );
 }

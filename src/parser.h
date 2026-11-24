@@ -13,13 +13,16 @@ typedef enum {
     CHART_COLUMN,
     CHART_LINE,
     CHART_PIE,
-    CHART_COMBINATION
+    CHART_COMBINATION,
+    CHART_DISPLAY
 } ChartType;
 
 typedef struct {
     bool show_identifiers;
     bool legend;
     bool no_underscore_names;
+    char *xlabel;
+    char *ylabel;
 } GlobalConfig;
 
 typedef struct {
@@ -82,6 +85,19 @@ typedef struct {
     bool show_sub_titles;
 } CombinationConfig;
 
+typedef enum {
+    DISPLAY_FIT,
+    DISPLAY_STRETCH,
+    DISPLAY_NONE
+} DisplayFit;
+
+typedef struct {
+    DisplayFit fit;
+    int border_thickness;
+    char border_color[7];
+    bool has_border;
+} DisplayConfig;
+
 struct ChartConfig {
     ChartType type;
 
@@ -94,6 +110,7 @@ struct ChartConfig {
         PieConfig pie;
         BarConfig bar;
         CombinationConfig combination;
+        DisplayConfig display;
         ColumnConfig column;
         ColumnConfig line;
     } specific;
@@ -215,6 +232,10 @@ typedef struct {
     int chart_count;
 } CombinationGraph;
 
+typedef struct {
+    SDL_Texture *image;
+} DisplayGraph;
+
 struct Graph {
     union {
         struct {
@@ -229,6 +250,7 @@ struct Graph {
         PieGraph pie;
         BarGraph bar;
         CombinationGraph combination;
+        DisplayGraph display;
         ColumnGraph column;
         ColumnGraph line;
     } data;

@@ -7,6 +7,7 @@
 #include "renderer.h"
 #include "column_graph.h"
 #include "line_graph.h"
+#include "display_graph.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -84,6 +85,16 @@ static bool draw_child_chart(
             line_graph_draw(
                 renderer,
                 font,
+                chart->graph,
+                chart->config,
+                width,
+                height
+            );
+            break;
+
+        case CHART_DISPLAY:
+            display_graph_draw(
+                renderer,
                 chart->graph,
                 chart->config,
                 width,

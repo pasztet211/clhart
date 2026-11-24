@@ -38,5 +38,15 @@ void draw_title(
     const char *title,
     int width
 );
+void draw_axis_labels(
+    SDL_Renderer *renderer,
+    TTF_Font *font,
+    const ChartConfig *config,
+    int left,
+    int top,
+    int right,
+    int bottom,
+    int height
+);
 
 #endif

@@ -6,6 +6,7 @@
 #include "combination_graph_render.h"
 #include "column_graph.h"
 #include "line_graph.h"
+#include "display_graph.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../stb_image_write.h"
@@ -127,6 +128,9 @@ static void draw_chart_frame(
             break;
         case CHART_LINE:
             line_graph_draw(renderer, font, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
+            break;
+        case CHART_DISPLAY:
+            display_graph_draw(renderer, graph, config, WINDOW_WIDTH, WINDOW_HEIGHT);
             break;
     }
 
@@ -599,6 +603,92 @@ void draw_title(
     SDL_FreeSurface(surface);
 }
 
+static void draw_axis_label(
+    SDL_Renderer *renderer,
+    TTF_Font *font,
+    const char *label,
+    int center_x,
+    int center_y,
+    bool vertical
+) {
+    if (!label || label[0] == '\0') {
+        return;
+    }
+
+    SDL_Color color = {220, 220, 220, 255};
+    SDL_Surface *surface = TTF_RenderUTF8_Blended(font, label, color);
+    if (!surface) {
+        fprintf(stderr, "could not render axis label: %s\n", TTF_GetError());
+        return;
+    }
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        fprintf(
+            stderr,
+            "could not create axis label texture: %s\n",
+            SDL_GetError()
+        );
+        SDL_FreeSurface(surface);
+        return;
+    }
+
+    SDL_Rect destination = {
+        center_x - surface->w / 2,
+        center_y - surface->h / 2,
+        surface->w,
+        surface->h
+    };
+
+    if (SDL_RenderCopyEx(
+        renderer,
+        texture,
+        NULL,
+        &destination,
+        vertical ? 270.0 : 0.0,
+        NULL,
+        SDL_FLIP_NONE
+    ) != 0) {
+        fprintf(stderr, "could not draw axis label: %s\n", SDL_GetError());
+    }
+
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(surface);
+}
+
+void draw_axis_labels(
+    SDL_Renderer *renderer,
+    TTF_Font *font,
+    const ChartConfig *config,
+    int left,
+    int top,
+    int right,
+    int bottom,
+    int height
+) {
+    if (!config) {
+        return;
+    }
+
+    int label_height = TTF_FontHeight(font);
+    draw_axis_label(
+        renderer,
+        font,
+        config->global.xlabel,
+        (left + right) / 2,
+        height - label_height / 2 - 8,
+        false
+    );
+    draw_axis_label(
+        renderer,
+        font,
+        config->global.ylabel,
+        left / 2 - label_height - 6,
+        (top + bottom) / 2,
+        true
+    );
+}
+
 void draw_legend(
     SDL_Renderer *renderer,
     TTF_Font *font,
@@ -613,6 +703,10 @@ void draw_legend(
     int count = 0;
 
     switch (config->type) {
+        case CHART_COMBINATION:
+        case CHART_DISPLAY:
+            return;
+
         case CHART_NODES:
             count = graph->data.nodes.node_count;
             break;
@@ -889,6 +983,13 @@ bool render_graph(
             if (graph->data.line.category_count <= 0 ||
                 graph->data.line.series_count <= 0) {
                 fprintf(stderr, "cannot render an empty line chart\n");
+                return false;
+            }
+            break;
+
+        case CHART_DISPLAY:
+            if (!graph->data.display.image) {
+                fprintf(stderr, "cannot render a display without an image\n");
                 return false;
             }
             break;

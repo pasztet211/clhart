@@ -556,8 +556,6 @@ void histogram_graph_draw(
     int width,
     int height
 ) {
-    (void)font;
-
     const HistogramGraph *histogram = &graph->data.histogram;
     const HistogramConfig *settings = &config->specific.histogram;
 
@@ -575,6 +573,9 @@ void histogram_graph_draw(
     float top = 80 * scale * 1.15;
     float right = width - 70 * scale * 1.15;
     float bottom = height - 90 * scale * 1.15;
+    if (config->global.xlabel && config->global.xlabel[0] != '\0') {
+        bottom -= TTF_FontHeight(font) + 12 * scale;
+    }
 
     float plot_width = right - left;
     float plot_height = bottom - top;
@@ -698,6 +699,7 @@ void histogram_graph_draw(
                 );
             }
         }
+
     }
 
     if (settings->type == HISTOGRAM_DISTRIBUTION) {
@@ -777,4 +779,15 @@ void histogram_graph_draw(
             );
         }
     }
+
+    draw_axis_labels(
+        renderer,
+        font,
+        config,
+        (int)left,
+        (int)top,
+        (int)right,
+        (int)bottom,
+        height
+    );
 }

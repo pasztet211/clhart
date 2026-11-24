@@ -565,7 +565,10 @@ void column_graph_draw(
     const int left = (int)lround(85 * scale * 1.15);
     const int top = (int)lround(70 * scale * 1.15);
     const int right = width - (int)lround(30 * scale * 1.15);
-    const int bottom = height - (int)lround(90 * scale * 1.15);
+    int bottom = height - (int)lround(90 * scale * 1.15);
+    if (config->global.xlabel && config->global.xlabel[0] != '\0') {
+        bottom -= TTF_FontHeight(font) + (int)lround(12 * scale);
+    }
 
     int plot_width = right - left;
     int plot_height = bottom - top;
@@ -658,6 +661,7 @@ void column_graph_draw(
                 );
             }
         }
+
     }
 
     // Clip columns to the plotting area
@@ -809,5 +813,17 @@ void column_graph_draw(
                 );
             }
         }
+
     }
+
+    draw_axis_labels(
+        renderer,
+        font,
+        config,
+        left,
+        top,
+        right,
+        bottom,
+        height
+    );
 }

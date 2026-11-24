@@ -8,6 +8,7 @@
 #include <math.h>
 #include <errno.h>
 #include <stdint.h>
+#include <limits.h>
 
 typedef struct {
     char *name;
@@ -49,11 +50,22 @@ static char *parse_setting_value(Parser *p) {
     skip_whitespace(p);
 
     size_t start = p->position;
+    bool quoted = false;
 
-    while (p->source[p->position] &&
-           p->source[p->position] != ',' &&
-           p->source[p->position] != '}') {
+    while (p->source[p->position]) {
+        if (p->source[p->position] == '"') {
+            quoted = !quoted;
+        } else if (!quoted &&
+                   (p->source[p->position] == ',' ||
+                    p->source[p->position] == '}')) {
+            break;
+        }
+
         p->position++;
+    }
+
+    if (quoted) {
+        return NULL;
     }
 
     size_t end = p->position;
@@ -78,6 +90,31 @@ static char *parse_setting_value(Parser *p) {
     value[length] = '\0';
 
     return value;
+}
+
+static char *copy_setting_text(const char *value) {
+    while (isspace((unsigned char)*value)) {
+        value++;
+    }
+
+    size_t length = strlen(value);
+    while (length > 0 && isspace((unsigned char)value[length - 1])) {
+        length--;
+    }
+
+    if (length >= 2 && value[0] == '"' && value[length - 1] == '"') {
+        value++;
+        length -= 2;
+    }
+
+    char *text = malloc(length + 1);
+    if (!text) {
+        return NULL;
+    }
+
+    memcpy(text, value, length);
+    text[length] = '\0';
+    return text;
 }
 
 static char *parse_title(Parser *p) {
@@ -224,6 +261,9 @@ static char *parse_image_path(Parser *p) {
     }
 
     size_t length = p->position - start;
+    if (length == 0) {
+        return NULL;
+    }
 
     char *path = malloc(length + 1);
 
@@ -348,6 +388,80 @@ static bool parse_images(
     }
 }
 
+static bool parse_display_image(
+    Parser *p,
+    Graph *graph,
+    SDL_Renderer *renderer
+) {
+    char *path = parse_image_path(p);
+    if (!path) {
+        fprintf(stderr, "expected display image in (*\"path\"*) format\n");
+        return false;
+    }
+
+    char *resolved_path = resolve_image_path(p, path);
+    if (!resolved_path) {
+        fprintf(stderr, "could not resolve display image path '%s'\n", path);
+        free(path);
+        return false;
+    }
+
+    graph->data.display.image = load_image_texture(renderer, resolved_path);
+    if (!graph->data.display.image) {
+        fprintf(stderr, "could not load display image from '%s'\n", resolved_path);
+    }
+
+    free(resolved_path);
+    free(path);
+    return graph->data.display.image != NULL;
+}
+
+static bool parse_display_border(
+    const char *value,
+    DisplayConfig *display
+) {
+    errno = 0;
+    char *end;
+    long thickness = strtol(value, &end, 10);
+
+    if (errno || end == value || thickness <= 0 || thickness > INT_MAX) {
+        return false;
+    }
+
+    if (end[0] == 'p' && end[1] == 'x') {
+        end += 2;
+    }
+
+    while (isspace((unsigned char)*end)) {
+        end++;
+    }
+
+    if (*end++ != ':' || *end++ != '#') {
+        return false;
+    }
+
+    if (strlen(end) != 7) {
+        return false;
+    }
+
+    for (int i = 0; i < 6; i++) {
+        if (!isxdigit((unsigned char)end[i])) {
+            return false;
+        }
+
+        display->border_color[i] = end[i];
+    }
+
+    if (end[6] != ':' || end[7] != '\0') {
+        return false;
+    }
+
+    display->border_color[6] = '\0';
+    display->border_thickness = (int)thickness;
+    display->has_border = true;
+    return true;
+}
+
 static bool parse_range(
     const char *value,
     double *min,
@@ -397,6 +511,47 @@ static bool apply_settings(
             }
 
             config->global.legend = strcmp(value, "1") == 0;
+        }
+
+        else if (strcmp(name, "xlabel") == 0) {
+            config->global.xlabel = copy_setting_text(value);
+            if (!config->global.xlabel) {
+                fprintf(stderr, "could not allocate xlabel\n");
+                return false;
+            }
+        }
+
+        else if (strcmp(name, "ylabel") == 0) {
+            config->global.ylabel = copy_setting_text(value);
+            if (!config->global.ylabel) {
+                fprintf(stderr, "could not allocate ylabel\n");
+                return false;
+            }
+        }
+
+        else if (config->type == CHART_DISPLAY &&
+                 strcmp(name, "fit") == 0) {
+            if (strcmp(value, "fit") == 0) {
+                config->specific.display.fit = DISPLAY_FIT;
+            } else if (strcmp(value, "stretch") == 0) {
+                config->specific.display.fit = DISPLAY_STRETCH;
+            } else if (strcmp(value, "none") == 0) {
+                config->specific.display.fit = DISPLAY_NONE;
+            } else {
+                fprintf(stderr, "fit must be fit, stretch, or none\n");
+                return false;
+            }
+        }
+
+        else if (config->type == CHART_DISPLAY &&
+                 strcmp(name, "border") == 0) {
+            if (!parse_display_border(value, &config->specific.display)) {
+                fprintf(
+                    stderr,
+                    "invalid border: expected thickness[px] :#RRGGBB:\n"
+                );
+                return false;
+            }
         }
 
         else if (config->type == CHART_NODES &&
@@ -842,6 +997,8 @@ bool parse_graph(
                 config->type = CHART_COLUMN;
             } else if (expect_word(p, "line")) {
                 config->type = CHART_LINE;
+            } else if (expect_word(p, "display")) {
+                config->type = CHART_DISPLAY;
             } else {
                 fprintf(stderr, "invalid or unsupported chart type\n");
                 goto cleanup;
@@ -979,6 +1136,12 @@ bool parse_graph(
             }
             break;
 
+        case CHART_DISPLAY:
+            if (!parse_display_image(p, graph, renderer)) {
+                goto cleanup;
+            }
+            break;
+
         default:
             fprintf(stderr, "unsupported chart type\n");
             goto cleanup;
@@ -1004,6 +1167,10 @@ cleanup:
     if (!success) {
         free(config->title);
         config->title = NULL;
+        free(config->global.xlabel);
+        config->global.xlabel = NULL;
+        free(config->global.ylabel);
+        config->global.ylabel = NULL;
     }
 
     return success;
@@ -1110,6 +1277,8 @@ void free_chart_config(ChartConfig *config) {
         return;
 
     free(config->title);
+    free(config->global.xlabel);
+    free(config->global.ylabel);
     free(config);
 }
 
@@ -1162,6 +1331,12 @@ void free_graph(Graph *graph, ChartType type) {
             }
 
             free(graph->data.combination.charts);
+            break;
+
+        case CHART_DISPLAY:
+            if (graph->data.display.image) {
+                SDL_DestroyTexture(graph->data.display.image);
+            }
             break;
         
         case CHART_COLUMN:

@@ -81,6 +81,14 @@ Relative image paths are resolved from the directory containing the `.clh` file.
 - `show_labels` displays identifiers instead of names
 - `legend` displays a color-coded legend
 - `no_underscore_names` makes all display names render spaces instead of underscores (`_`)
+- `xlabel` and `ylabel` set the horizontal and vertical axis labels on histogram, bar, column, and line charts. Use quotes for labels with spaces or commas. Combination charts set these in each child chart's `.setup`.
+
+```text
+.setup {
+    xlabel --- "Year, reported",
+    ylabel --- "Population"
+}
+```
 
 #### Misc
 
@@ -226,6 +234,22 @@ lines {
     [series name] --- [value];[value];[value] :[optional hex color]:,
     [series name] --- [value];[value];[value] :[optional hex color]:
 }
+```
+
+#### display:
+
+- displays one image directly, without a data block
+- the `fit` setup option can be `fit` (preserve aspect ratio and scale to fit), `stretch` (fill the window), or `none` (native size, centered)
+- an optional `border` takes a pixel thickness and a hex color
+- image paths are relative to the `.clh` file
+
+```text
+.type {display}
+.setup {
+    fit --- fit,
+    border --- 2px :#FFFFFF:
+}
+(*"images/picture.png"*)
 ```
 
 #### combination:

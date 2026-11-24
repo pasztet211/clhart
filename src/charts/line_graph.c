@@ -150,6 +150,9 @@ void line_graph_draw(
     int top = (int)lround(70 * scale * 1.15);
     int right = width - (int)lround(30 * scale * 1.15);
     int bottom = height - (int)lround(90 * scale * 1.15);
+    if (config->global.xlabel && config->global.xlabel[0] != '\0') {
+        bottom -= TTF_FontHeight(font) + (int)lround(12 * scale);
+    }
 
     if (right <= left || bottom <= top)
         return;
@@ -198,6 +201,7 @@ void line_graph_draw(
                 );
             }
         }
+
     }
 
     SDL_Rect clip = {left, top, right - left, bottom - top};
@@ -321,6 +325,18 @@ void line_graph_draw(
                     );
                 }
             }
+
         }
     }
+
+    draw_axis_labels(
+        renderer,
+        font,
+        config,
+        left,
+        top,
+        right,
+        bottom,
+        height
+    );
 }
